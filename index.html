@@ -33,7 +33,7 @@
         /* Boxen Status */
         .box-status {
             display: grid;
-            grid-template-columns: repeat(6, 1fr); /* Jetzt 6 Spalten (inkl. Pool) */
+            grid-template-columns: repeat(6, 1fr);
             gap: 5px;
             margin-bottom: 10px;
         }
@@ -57,6 +57,17 @@
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
+        }
+
+        /* Dropdown & Lade-Button Bereich */
+        .load-area {
+            display: flex; gap: 10px; margin-bottom: 15px; width: 100%;
+        }
+        .load-area select {
+            flex: 2; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 1rem; margin: 0;
+        }
+        .load-area button {
+            flex: 1; background: #34495e; color: white; border-radius: 6px; padding: 10px; border: none; font-weight: bold; cursor: pointer;
         }
 
         /* Eigene Vokabel hinzufügen */
@@ -89,31 +100,15 @@
         .vocab-reveal { font-size: 2.5rem; color: #2c3e50; margin: 10px 0; display: none; }
         .pinyin-reveal { font-size: 1.4rem; color: #7f8c8d; display: none; }
 
-        /* Buttons */
+        /* Buttons für Karte */
         .btn-group { display: flex; gap: 10px; width: 100%; }
-        button {
-            flex: 1;
-            padding: 15px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: opacity 0.2s;
+        .card-btn {
+            flex: 1; padding: 15px; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: opacity 0.2s;
         }
-        button:active { opacity: 0.8; }
+        .card-btn:active { opacity: 0.8; }
         .btn-reveal { background: var(--primary); color: white; width: 100%; }
         .btn-wrong { background: var(--danger); color: white; display: none; }
         .btn-correct { background: var(--success); color: white; display: none; }
-        
-        select {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            font-size: 1rem;
-        }
     </style>
 </head>
 <body>
@@ -121,13 +116,15 @@
 <div class="container">
     <h1>🇨🇳 HSK Karteikasten (SRS)</h1>
     
-    <select id="hsk-select" onchange="hskHinzufuegen()">
-        <option value="">-- HSK-Wörterbuch in Pool laden --</option>
-        <option value="HSK 1">HSK 1 (10 Vokabeln)</option>
-        <option value="HSK 2">HSK 2 (3 Vokabeln)</option>
-    </select>
+    <div class="load-area">
+        <select id="hsk-select">
+            <option value="">-- Wörterbuch wählen --</option>
+            <option value="HSK 1">HSK 1 (10 Vokabeln)</option>
+            <option value="HSK 2">HSK 2 (3 Vokabeln)</option>
+        </select>
+        <button onclick="hskHinzufuegen()">In Pool laden</button>
+    </div>
 
-    <!-- Boxen Anzeige -->
     <div class="box-status">
         <div class="box-indicator pool-indicator" id="b-pool">Pool<br><span id="count-pool">0</span></div>
         <div class="box-indicator" id="b1">B1<br><span id="count-box1">0</span></div>
@@ -137,10 +134,8 @@
         <div class="box-indicator" id="b5">B5<br><span id="count-box5">0</span></div>
     </div>
 
-    <!-- Nachschub Button -->
     <button class="btn-pool" onclick="ladeNeueAusPool()">+ 5 neue Vokabeln aus Pool laden</button>
 
-    <!-- Karteikarte -->
     <div class="card" id="flashcard" onclick="rueckseiteZeigen()">
         <div class="vocab-de" id="vocab-de">Lade Vokabeln...</div>
         <div class="vocab-hidden" id="hint-text">Tippe die Karte, um das Zeichen & Pinyin zu sehen</div>
@@ -148,14 +143,12 @@
         <div class="pinyin-reveal" id="vocab-pinyin">wǒ</div>
     </div>
 
-    <!-- Buttons für Karte -->
-    <button class="btn-reveal" id="btn-reveal" onclick="rueckseiteZeigen()">Rückseite zeigen</button>
+    <button class="card-btn btn-reveal" id="btn-reveal" onclick="rueckseiteZeigen()">Rückseite zeigen</button>
     <div class="btn-group">
-        <button class="btn-wrong" id="btn-wrong" onclick="beantworte(false)">Falsch (Box zurück)</button>
-        <button class="btn-correct" id="btn-correct" onclick="beantworte(true)">Richtig (Box vor)</button>
+        <button class="card-btn btn-wrong" id="btn-wrong" onclick="beantworte(false)">Falsch (Box zurück)</button>
+        <button class="card-btn btn-correct" id="btn-correct" onclick="beantworte(true)">Richtig (Box vor)</button>
     </div>
 
-    <!-- Eigene Vokabeln manuell hinzufügen -->
     <div class="custom-input" style="margin-top: 30px;">
         <h4 style="margin: 0 0 10px 0;">Manuell eine neue Vokabel hinzufügen</h4>
         <input type="text" id="neu-de" placeholder="Bedeutung (z.B. Apfel)">
@@ -187,12 +180,11 @@ const VOKABELN = {
     ]
 };
 
-// Fortschritt aus dem Speicher laden (inklusive Pool)
+// Fortschritt aus dem Speicher laden
 let daten = localStorage.getItem('hsk_srs_daten') ? JSON.parse(localStorage.getItem('hsk_srs_daten')) : {
     pool: [], box1: [], box2: [], box3: [], box4: [], box5: []
 };
 
-// Falls alte Speicherdaten existieren und "pool" fehlt, patchen wir es
 if(!daten.pool) daten.pool = [];
 
 let aktuelleBox = null;
@@ -216,23 +208,44 @@ function uiAktualisieren() {
 
 function hskHinzufuegen() {
     const stufe = document.getElementById('hsk-select').value;
-    if(!stufe || !VOKABELN[stufe]) return;
+    
+    if(!stufe) {
+        alert("Bitte wähle zuerst ein Wörterbuch aus dem Dropdown-Menü aus!");
+        return;
+    }
+    if(!VOKABELN[stufe]) return;
+
+    let hinzugefuegt = 0;
+    let existierenBereits = 0;
 
     VOKABELN[stufe].forEach(vok => {
-        // Prüfen ob Vokabel schon im System ist (egal in welcher Box oder im Pool)
         let existiert = false;
+        
+        // Prüfen, ob im Pool...
         if(daten.pool.some(b => b.deutsch === vok.deutsch)) existiert = true;
+        // ...oder in einer der 5 Boxen
         for(let i=1; i<=5; i++) {
             if(daten[`box${i}`].some(b => b.deutsch === vok.deutsch)) existiert = true;
         }
-        // Neu: Landet erst im Pool!
-        if(!existiert) daten.pool.push(vok);
+        
+        if(!existiert) {
+            daten.pool.push(vok);
+            hinzugefuegt++;
+        } else {
+            existierenBereits++;
+        }
     });
+
+    // Feedback an den Nutzer
+    if (hinzugefuegt > 0) {
+        alert(`${hinzugefuegt} neue Vokabeln aus "${stufe}" wurden dem Pool hinzugefügt!`);
+    } else if (existierenBereits > 0) {
+        alert(`Alle Vokabeln aus "${stufe}" befinden sich bereits im Pool oder in deinen Lernboxen.`);
+    }
 
     document.getElementById('hsk-select').value = "";
     speichereDaten();
     
-    // Falls man noch gar keine Karten lernt, versuchen wir direkt welche zu laden
     if(!aktuelleVokabel && daten.box1.length === 0) {
         ladeNeueAusPool();
     } else {
@@ -242,13 +255,13 @@ function hskHinzufuegen() {
 
 function ladeNeueAusPool() {
     if (daten.pool.length === 0) {
-        alert("Der Pool ist leer! Wähle oben eine HSK-Stufe aus, um den Pool zu füllen.");
+        alert("Der Pool ist leer! Wähle oben ein Wörterbuch aus und klicke auf 'In Pool laden'.");
         return;
     }
     
     let hinzugefuegt = 0;
     while(hinzugefuegt < 5 && daten.pool.length > 0) {
-        daten.box1.push(daten.pool.shift()); // Nimmt das erste Element aus Pool und packt es in Box 1
+        daten.box1.push(daten.pool.shift());
         hinzugefuegt++;
     }
     
@@ -277,7 +290,6 @@ function eigeneVokabelHinzufuegen() {
 }
 
 function naechsteVokabel() {
-    // Finde alle Boxen die nicht leer sind
     let verfuegbareBoxen = [];
     for(let i=1; i<=5; i++) {
         if(daten[`box${i}`].length > 0) verfuegbareBoxen.push(`box${i}`);
@@ -297,7 +309,6 @@ function naechsteVokabel() {
         return;
     }
 
-    // Gewichtung: Box 1 am häufigsten, Box 5 am seltensten
     let gewichteteBoxen = [];
     if(daten.box1.length > 0) for(let i=0; i<5; i++) gewichteteBoxen.push('box1');
     if(daten.box2.length > 0) for(let i=0; i<4; i++) gewichteteBoxen.push('box2');
@@ -309,7 +320,6 @@ function naechsteVokabel() {
     const boxInhalt = daten[aktuelleBox];
     aktuelleVokabel = boxInhalt[Math.floor(Math.random() * boxInhalt.length)];
 
-    // UI zurücksetzen auf Vorderseite
     document.getElementById('vocab-de').innerText = aktuelleVokabel.deutsch;
     document.getElementById('vocab-hanzi').innerText = aktuelleVokabel.hanzi;
     document.getElementById('vocab-pinyin').innerText = aktuelleVokabel.pinyin;
@@ -332,21 +342,20 @@ function rueckseiteZeigen() {
     document.getElementById('hint-text').style.display = "none";
     
     document.getElementById('btn-reveal').style.display = "none";
-    document.getElementById('btn-wrong').style.display = "inline-block";
-    document.getElementById('btn-correct').style.display = "inline-block";
+    document.getElementById('btn-wrong').style.display = "flex";
+    document.getElementById('btn-correct').style.display = "flex";
 }
 
 function beantworte(richtig) {
     let aktuelleNummer = parseInt(aktuelleBox.replace('box', ''));
     
-    // Vokabel aus alter Box löschen
     daten[aktuelleBox] = daten[aktuelleBox].filter(v => v.deutsch !== aktuelleVokabel.deutsch);
     
     if(richtig) {
         let neueNummer = Math.min(5, aktuelleNummer + 1);
         daten[`box${neueNummer}`].push(aktuelleVokabel);
     } else {
-        let neueNummer = Math.max(1, aktuelleNummer - 1); // Fällt maximal bis Box 1 zurück
+        let neueNummer = Math.max(1, aktuelleNummer - 1);
         daten[`box${neueNummer}`].push(aktuelleVokabel);
     }
     
@@ -354,7 +363,6 @@ function beantworte(richtig) {
     naechsteVokabel();
 }
 
-// Start der App
 naechsteVokabel();
 uiAktualisieren();
 </script>

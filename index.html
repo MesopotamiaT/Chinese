@@ -7,10 +7,11 @@
     <style>
         :root { --bg: #f0f2f5; --card: #fff; --box1: #e74c3c; --box5: #27ae60; --primary: #3498db; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        .nav { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        .stats { display: flex; justify-content: space-between; background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .box-badge { font-weight: bold; padding: 5px 10px; border-radius: 5px; background: #eee; }
-        .card { background: var(--card); padding: 40px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; cursor: pointer; min-height: 200px; display: flex; flex-direction: column; justify-content: center; }
+        .container { max-width: 500px; margin: auto; }
+        .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 20px; }
+        .stat-box { background: #fff; padding: 10px 5px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0.75rem; font-weight: bold; }
+        .card { background: var(--card); padding: 40px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; cursor: pointer; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none; }
         button { width: 100%; padding: 15px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; }
     </style>
@@ -21,15 +22,15 @@
     <div class="nav">
         <h2>HSK Trainer</h2>
         <input type="file" id="csvFile" style="display:none" onchange="importCSV(this.files[0])">
-        <button onclick="document.getElementById('csvFile').click()" style="width:auto">CSV Import</button>
+        <button onclick="document.getElementById('csvFile').click()" style="width:auto; padding: 10px;">CSV Import</button>
     </div>
 
     <div class="stats" id="stats"></div>
 
     <div class="card" onclick="flip()">
-        <div id="v-de" style="font-size: 1.5rem;">Datei importieren zum Starten</div>
-        <div id="v-hz" class="hidden" style="font-size: 3rem; margin: 10px;"></div>
-        <div id="v-py" class="hidden" style="font-size: 1.2rem; color: #666;"></div>
+        <div id="v-de" style="font-size: 1.5rem; font-weight:bold;">Datei importieren zum Starten</div>
+        <div id="v-hz" class="hidden" style="font-size: 3rem; margin: 15px;"></div>
+        <div id="v-py" class="hidden" style="font-size: 1.3rem; color: #666;"></div>
     </div>
 
     <div id="controls" class="hidden">
@@ -43,27 +44,46 @@ let state = JSON.parse(localStorage.getItem('hsk_data')) || { box1: [], box2: []
 let currentCard = null;
 
 function updateUI() {
-    document.getElementById('stats').innerHTML = [1,2,3,4,5].map(i => `<div class="box-badge">B${i}: ${state['box'+i].length}</div>`).join('');
+    document.getElementById('stats').innerHTML = [1,2,3,4,5].map(i => `<div class="stat-box">B${i}<br>${state['box'+i].length}</div>`).join('');
     localStorage.setItem('hsk_data', JSON.stringify(state));
 }
 
 function importCSV(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
-        const rows = e.target.result.split('\n');
+        const rows = e.target.result.replace(/\r/g, "").split('\n');
+        let count = 0;
         rows.forEach(r => {
-            const [de, hz, py] = r.split(',');
-            if(de && hz) state.box1.push({de, hz, py});
+            const parts = r.split(',');
+            if(parts.length >= 3) {
+                const [de, hz, py] = parts;
+                // Importiere, wenn Vokabel noch nirgendwo existiert
+                if(![1,2,3,4,5].some(i => state['box'+i].some(c => c.de === de.trim()))) {
+                    state.box1.push({de: de.trim(), hz: hz.trim(), py: py.trim()});
+                    count++;
+                }
+            }
         });
         updateUI(); next();
+        alert(count + " neue Vokabeln importiert!");
     };
     reader.readAsText(file);
 }
 
 function next() {
-    let weights = ['box1','box1','box1','box1','box1', 'box2','box2','box2', 'box3','box3', 'box4','box4', 'box5'];
-    let box = weights.find(b => state[b].length > 0) || Object.keys(state).find(b => state[b].length > 0);
-    if(!box) { document.getElementById('v-de').innerText = "Alle Boxen leer!"; return; }
+    // Wahrscheinlichkeit: Box 1 am höchsten
+    let pool = [];
+    state.box1.forEach(() => pool.push('box1'));
+    state.box1.forEach(() => pool.push('box1')); // Gewichtung: Box 1 kommt doppelt so oft vor
+    state.box2.forEach(() => pool.push('box2'));
+    state.box3.forEach(() => pool.push('box3'));
+    state.box4.forEach(() => pool.push('box4'));
+    state.box5.forEach(() => pool.push('box5'));
+
+    let box = pool[Math.floor(Math.random() * pool.length)] || Object.keys(state).find(b => state[b].length > 0);
+    
+    if(!box) { document.getElementById('v-de').innerText = "Bitte CSV importieren!"; return; }
+    
     currentCard = state[box][Math.floor(Math.random() * state[box].length)];
     document.getElementById('v-de').innerText = currentCard.de;
     document.getElementById('v-hz').classList.add('hidden');

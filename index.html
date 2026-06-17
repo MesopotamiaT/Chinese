@@ -3,113 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chinesisch Pro Trainer</title>
+    <title>HSK Leitner Pro</title>
     <style>
-        :root { --bg: #f0f2f5; --card: #ffffff; --primary: #3498db; --success: #27ae60; --danger: #e74c3c; }
-        body { font-family: -apple-system, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; color: #333; }
-        .view { display: none; } .active { display: block; }
-        .card { background: var(--card); padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; margin: 20px 0; min-height: 200px; display: flex; flex-direction: column; justify-content: center; }
-        button { width: 100%; padding: 15px; margin: 5px 0; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
-        .btn-primary { background: var(--primary); color: white; }
-        .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 20px; }
-        .stat-box { background: #ddd; padding: 10px 0; border-radius: 8px; text-align: center; font-size: 0.7rem; }
+        :root { --bg: #f0f2f5; --card: #fff; --box1: #e74c3c; --box5: #27ae60; --primary: #3498db; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .nav { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .stats { display: flex; justify-content: space-between; background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .box-badge { font-weight: bold; padding: 5px 10px; border-radius: 5px; background: #eee; }
+        .card { background: var(--card); padding: 40px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; cursor: pointer; min-height: 200px; display: flex; flex-direction: column; justify-content: center; }
+        .hidden { display: none; }
+        button { width: 100%; padding: 15px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<!-- DASHBOARD ANSICHT -->
-<div id="view-home" class="view active">
-    <h1>🇨🇳 Chinesisch Trainer</h1>
-    <div class="stats" id="stats"></div>
-    <select id="hsk-select" style="width:100%; padding:15px; border-radius:12px;">
-        <option value="HSK 1">HSK 1 hinzufügen</option>
-        <option value="HSK 2">HSK 2 hinzufügen</option>
-        <option value="HSK 3">HSK 3 hinzufügen</option>
-    </select>
-    <button class="btn-primary" onclick="addCards()">Stufe zum Lernpool hinzufügen</button>
-    <button onclick="showView('view-train')">🚀 Training starten</button>
-</div>
-
-<!-- TRAINING ANSICHT -->
-<div id="view-train" class="view">
-    <button onclick="showView('view-home')">← Zurück zum Menü</button>
-    <div class="card" id="card" onclick="flip()">
-        <div id="v-de" style="font-size: 1.4rem; font-weight: bold;">Tippe zum Starten</div>
-        <div id="v-hz" style="font-size: 2.5rem; display:none; margin:10px;"></div>
-        <div id="v-py" style="font-size: 1.2rem; color: #666; display:none;"></div>
+<div class="container">
+    <div class="nav">
+        <h2>HSK Trainer</h2>
+        <input type="file" id="csvFile" style="display:none" onchange="importCSV(this.files[0])">
+        <button onclick="document.getElementById('csvFile').click()" style="width:auto">CSV Import</button>
     </div>
-    <div id="ctrl" style="display:none;">
-        <button style="background:var(--danger); color:white;" onclick="grade(false)">Nochmal (B1)</button>
-        <button style="background:var(--success); color:white;" onclick="grade(true)">Gewusst (Weiter)</button>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="card" onclick="flip()">
+        <div id="v-de" style="font-size: 1.5rem;">Datei importieren zum Starten</div>
+        <div id="v-hz" class="hidden" style="font-size: 3rem; margin: 10px;"></div>
+        <div id="v-py" class="hidden" style="font-size: 1.2rem; color: #666;"></div>
+    </div>
+
+    <div id="controls" class="hidden">
+        <button style="background:var(--box1); color:white;" onclick="move(false)">Nochmal (B1)</button>
+        <button style="background:var(--box5); color:white;" onclick="move(true)">Gewusst (Vor)</button>
     </div>
 </div>
 
 <script>
-// --- DATENBANK ---
-const DB = {
-    "HSK 1": [{"deutsch":"ich","hanzi":"我","pinyin":"wǒ"},{"deutsch":"du","hanzi":"你","pinyin":"nǐ"}],
-    "HSK 2": [{"deutsch":"Kaffee","hanzi":"咖啡","pinyin":"kāfēi"}],
-    "HSK 3": [{"deutsch":"Büro","hanzi":"办公室","pinyin":"bàngōngshì"}]
-};
+let state = JSON.parse(localStorage.getItem('hsk_data')) || { box1: [], box2: [], box3: [], box4: [], box5: [] };
+let currentCard = null;
 
-let d = JSON.parse(localStorage.getItem('pro_srs')) || {b1:[], b2:[], b3:[], b4:[], b5:[]};
-let cur = null;
-
-function showView(id) {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById(id).classList.add('active');
-    updateStats();
+function updateUI() {
+    document.getElementById('stats').innerHTML = [1,2,3,4,5].map(i => `<div class="box-badge">B${i}: ${state['box'+i].length}</div>`).join('');
+    localStorage.setItem('hsk_data', JSON.stringify(state));
 }
 
-function updateStats() {
-    let s = document.getElementById('stats');
-    s.innerHTML = [1,2,3,4,5].map(i => `<div class="stat-box">B${i}<br>${d['b'+i].length}</div>`).join('');
+function importCSV(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const rows = e.target.result.split('\n');
+        rows.forEach(r => {
+            const [de, hz, py] = r.split(',');
+            if(de && hz) state.box1.push({de, hz, py});
+        });
+        updateUI(); next();
+    };
+    reader.readAsText(file);
 }
 
-function addCards() {
-    let s = document.getElementById('hsk-select').value;
-    DB[s].forEach(v => {
-        if(![1,2,3,4,5].some(i => d['b'+i].some(x => x.deutsch == v.deutsch))) d.b1.push(v);
-    });
-    localStorage.setItem('pro_srs', JSON.stringify(d));
-    updateStats();
-}
-
-function showCard() {
-    let pools = [1,2,3,4,5].filter(i => d['b'+i].length > 0);
-    if(pools.length == 0) { document.getElementById('v-de').innerText = "Keine Karten!"; return; }
-    
-    // Gewichtung: Box 1 am häufigsten
-    let weight = [1,1,1,1,1, 2,2,2,2, 3,3,3, 4,4, 5];
-    let b = 'b' + weight[Math.floor(Math.random() * weight.length)];
-    if(d[b].length == 0) b = 'b'+pools[0];
-    
-    cur = d[b][Math.floor(Math.random() * d[b].length)];
-    document.getElementById('v-de').innerText = cur.deutsch;
-    document.getElementById('v-hz').style.display = 'none';
-    document.getElementById('v-py').style.display = 'none';
-    document.getElementById('ctrl').style.display = 'none';
+function next() {
+    let weights = ['box1','box1','box1','box1','box1', 'box2','box2','box2', 'box3','box3', 'box4','box4', 'box5'];
+    let box = weights.find(b => state[b].length > 0) || Object.keys(state).find(b => state[b].length > 0);
+    if(!box) { document.getElementById('v-de').innerText = "Alle Boxen leer!"; return; }
+    currentCard = state[box][Math.floor(Math.random() * state[box].length)];
+    document.getElementById('v-de').innerText = currentCard.de;
+    document.getElementById('v-hz').classList.add('hidden');
+    document.getElementById('v-py').classList.add('hidden');
+    document.getElementById('controls').classList.add('hidden');
 }
 
 function flip() {
-    document.getElementById('v-hz').innerText = cur.hanzi;
-    document.getElementById('v-hz').style.display = 'block';
-    document.getElementById('v-py').innerText = cur.pinyin;
-    document.getElementById('v-py').style.display = 'block';
-    document.getElementById('ctrl').style.display = 'block';
+    document.getElementById('v-hz').innerText = currentCard.hz;
+    document.getElementById('v-py').innerText = currentCard.py;
+    document.getElementById('v-hz').classList.remove('hidden');
+    document.getElementById('v-py').classList.remove('hidden');
+    document.getElementById('controls').classList.remove('hidden');
 }
 
-function grade(ok) {
-    let b = [1,2,3,4,5].find(i => d['b'+i].includes(cur));
-    d['b'+b] = d['b'+b].filter(x => x != cur);
-    let nextB = ok ? Math.min(b+1, 5) : 1;
-    d['b'+nextB].push(cur);
-    localStorage.setItem('pro_srs', JSON.stringify(d));
-    showCard();
+function move(ok) {
+    let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
+    let idx = parseInt(oldBox[3]);
+    state[oldBox] = state[oldBox].filter(c => c !== currentCard);
+    let nextIdx = ok ? Math.min(idx + 1, 5) : 1;
+    state['box' + nextIdx].push(currentCard);
+    updateUI(); next();
 }
 
-showView('view-home');
-showCard();
+updateUI(); next();
 </script>
 </body>
 </html>

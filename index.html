@@ -2,53 +2,106 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>HSK Trainer</title>
+    <title>HSK SRS Trainer</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; background: #f4f7f6; }
-        .container { width: 100%; max-width: 500px; }
-        .card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; margin-bottom: 20px; }
-        button { padding: 15px; margin-top: 10px; width: 100%; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+        :root { --bg: #f4f7f6; --primary: #3498db; --success: #27ae60; --danger: #e74c3c; --pool: #f39c12; }
+        body { font-family: sans-serif; background-color: var(--bg); padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 450px; }
+        .box-status { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; margin-bottom: 15px; font-size: 0.7rem; }
+        .box-col { background: #ddd; padding: 5px 0; text-align: center; border-radius: 4px; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center; margin-bottom: 15px; min-height: 150px; display: flex; flex-direction: column; justify-content: center; }
+        button { padding: 12px; margin: 5px 0; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; width: 100%; }
+        .btn-wrong { background: var(--danger); color: white; }
+        .btn-correct { background: var(--success); color: white; }
+        .btn-pool { background: var(--pool); color: white; }
     </style>
 </head>
 <body>
+
 <div class="container">
-    <div class="card" id="card" onclick="flip()">
-        <div id="v-de" style="font-weight:bold; font-size:1.5rem;">Lade Vokabeln...</div>
-        <div id="v-hanzi" style="display:none; font-size:2.5rem; margin:10px;"></div>
-        <div id="v-pinyin" style="display:none; color:#666;"></div>
+    <select id="hsk-select" style="padding:10px; width:100%; margin-bottom:10px;">
+        <option value="HSK 1">HSK 1</option><option value="HSK 2">HSK 2</option><option value="HSK 3">HSK 3</option>
+    </select>
+    <button onclick="addHSK()" style="background:#34495e; color:white;">Stufe in Pool laden</button>
+
+    <div class="box-status">
+        <div class="box-col">P<br><span id="c-pool">0</span></div>
+        <div class="box-col">B1<br><span id="c-b1">0</span></div>
+        <div class="box-col">B2<br><span id="c-b2">0</span></div>
+        <div class="box-col">B3<br><span id="c-b3">0</span></div>
+        <div class="box-col">B4<br><span id="c-b4">0</span></div>
+        <div class="box-col">B5<br><span id="c-b5">0</span></div>
     </div>
-    <button onclick="beantworte(true)" style="background:#27ae60; color:white;">Richtig</button>
-    <button onclick="beantworte(false)" style="background:#e74c3c; color:white;">Falsch</button>
+
+    <button class="btn-pool" onclick="loadNext()">+ 5 Wörter in B1 laden</button>
+
+    <div class="card" onclick="flip()">
+        <div id="v-de" style="font-size: 1.3rem; font-weight: bold;">Wähle Stufe & lade Wörter</div>
+        <div id="v-hanzi" style="display:none; font-size: 2.5rem;"></div>
+        <div id="v-pinyin" style="display:none; color: #666;"></div>
+    </div>
+
+    <div style="display:flex; gap:10px;">
+        <button id="btn-w" class="btn-wrong" onclick="rate(false)" style="display:none;">Falsch</button>
+        <button id="btn-c" class="btn-correct" onclick="rate(true)" style="display:none;">Richtig</button>
+    </div>
 </div>
 
 <script>
-let pool = [];
-// Lade die CSV-Datei automatisch von deinem GitHub-Server
-fetch('vokabeln.csv')
-    .then(response => response.text())
-    .then(data => {
-        let lines = data.split('\n');
-        lines.slice(1).forEach(line => {
-            let [hsk, de, hz, py] = line.split(',');
-            if(de) pool.push({deutsch: de, hanzi: hz, pinyin: py});
-        });
-        next();
-    });
+// Die Vokabelliste (Hier ist alles drin)
+const DB = {
+    "HSK 1": [{"deutsch":"ich","hanzi":"我","pinyin":"wǒ"},{"deutsch":"du","hanzi":"你","pinyin":"nǐ"},{"deutsch":"gut","hanzi":"好","pinyin":"hǎo"}],
+    "HSK 2": [{"deutsch":"Kaffee","hanzi":"咖啡","pinyin":"kāfēi"},{"deutsch":"singen","hanzi":"唱歌","pinyin":"chànggē"}],
+    "HSK 3": [{"deutsch":"Büro","hanzi":"办公室","pinyin":"bàngōngshì"},{"deutsch":"helfen","hanzi":"帮忙","pinyin":"bāngmáng"}]
+};
 
-let current = null;
+let d = JSON.parse(localStorage.getItem('srs')) || {pool:[], b1:[], b2:[], b3:[], b4:[], b5:[]};
+let cur = null;
+
+function save() { localStorage.setItem('srs', JSON.stringify(d)); updateUI(); }
+function updateUI() { ['pool','b1','b2','b3','b4','b5'].forEach(x => document.getElementById('c-'+x).innerText = d[x].length); }
+
+function addHSK() {
+    let s = document.getElementById('hsk-select').value;
+    DB[s].forEach(v => {
+        if(![...d.pool,...d.b1,...d.b2,...d.b3,...d.b4,...d.b5].some(x=>x.deutsch==v.deutsch)) d.pool.push(v);
+    });
+    save(); alert("Wörter in Pool geladen!");
+}
+
+function loadNext() {
+    for(let i=0; i<5 && d.pool.length>0; i++) d.b1.push(d.pool.shift());
+    save(); next();
+}
+
 function next() {
-    current = pool[Math.floor(Math.random() * pool.length)];
-    document.getElementById('v-de').innerText = current.deutsch;
+    let b = ['b1','b2','b3','b4','b5'].find(x => d[x].length > 0);
+    if(!b) { document.getElementById('v-de').innerText = "Pool leer!"; return; }
+    cur = d[b][Math.floor(Math.random()*d[b].length)];
+    document.getElementById('v-de').innerText = cur.deutsch;
     document.getElementById('v-hanzi').style.display = 'none';
     document.getElementById('v-pinyin').style.display = 'none';
+    document.getElementById('btn-w').style.display = 'none';
+    document.getElementById('btn-c').style.display = 'none';
 }
+
 function flip() {
-    document.getElementById('v-hanzi').innerText = current.hanzi;
+    document.getElementById('v-hanzi').innerText = cur.hanzi;
     document.getElementById('v-hanzi').style.display = 'block';
-    document.getElementById('v-pinyin').innerText = current.pinyin;
+    document.getElementById('v-pinyin').innerText = cur.pinyin;
     document.getElementById('v-pinyin').style.display = 'block';
+    document.getElementById('btn-w').style.display = 'block';
+    document.getElementById('btn-c').style.display = 'block';
 }
-function beantworte(ok) { next(); }
+
+function rate(ok) {
+    let b = Object.keys(d).find(k => d[k].includes(cur));
+    d[b] = d[b].filter(x => x != cur);
+    let n = ok ? Math.min(parseInt(b[1]||0)+1, 5) : Math.max(parseInt(b[1]||0)-1, 1);
+    d['b'+n].push(cur);
+    save(); next();
+}
+updateUI(); next();
 </script>
 </body>
 </html>

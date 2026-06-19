@@ -54,11 +54,10 @@ function updateUI() {
 }
 
 function resetSpeicher() {
-    if(confirm("Bist du sicher? Dein gesamter Fortschritt und alle Vokabeln werden gelöscht!")) {
+    if(confirm("Speicher löschen und neu anfangen?")) {
         state = { box1: [], box2: [], box3: [], box4: [], box5: [] };
         updateUI();
         next();
-        alert("Speicher wurde erfolgreich geleert. Du kannst jetzt neu importieren.");
     }
 }
 
@@ -69,17 +68,30 @@ function importCSV(file) {
         const rows = e.target.result.replace(/\r/g, "").split('\n');
         let importCount = 0;
         
+        // Prüft, ob ein String chinesische Zeichen enthält
+        const hasHanzi = (str) => /[\u4e00-\u9fa5]/.test(str);
+
         rows.forEach(r => {
             const parts = r.split(',');
             if(parts.length >= 3) {
-                // Berücksichtigt CSVs mit 3 (De,Hz,Py) oder 4 (HSK,De,Hz,Py) Spalten
-                let de = parts.length >= 4 ? parts[1].trim() : parts[0].trim();
-                let hz = parts.length >= 4 ? parts[2].trim() : parts[1].trim();
-                let py = parts.length >= 4 ? parts[3].trim() : parts[2].trim();
+                let c1 = parts[0] ? parts[0].trim() : "";
+                let c2 = parts[1] ? parts[1].trim() : "";
+                let c3 = parts[2] ? parts[2].trim() : "";
+                let c4 = parts[3] ? parts[3].trim() : "";
                 
-                // Überschriften-Zeile ignorieren
-                if(de.toLowerCase() !== "deutsch" && de !== "") {
-                    // Duplikate verhindern
+                let de = "", hz = "", py = "";
+
+                // Intelligente Spalten-Erkennung
+                if (hasHanzi(c1)) {
+                    hz = c1; py = c2; de = c3;
+                    if(parts.length >= 4) de = c4; // Falls Format: Hanzi, Pinyin, Wortart, Deutsch
+                } else if (hasHanzi(c2)) {
+                    de = c1; hz = c2; py = c3;     // Format: Deutsch, Hanzi, Pinyin
+                } else if (hasHanzi(c3)) {
+                    de = c2; hz = c3; py = c4;     // Format: HSK-Level, Deutsch, Hanzi, Pinyin
+                }
+
+                if(de && hz && de.toLowerCase() !== "deutsch" && de.toLowerCase() !== "german") {
                     if(![1,2,3,4,5].some(i => state['box'+i].some(c => c.de === de))) {
                         state.box1.push({de: de, hz: hz, py: py});
                         importCount++;
@@ -88,10 +100,10 @@ function importCSV(file) {
             }
         });
         
-        document.getElementById('csvFile').value = ""; // Reset File Input
+        document.getElementById('csvFile').value = ""; 
         updateUI(); 
         next();
-        alert(importCount + " Vokabeln erfolgreich importiert!");
+        alert(importCount + " Vokabeln erfolgreich importiert! Deutsch wird jetzt zuerst angezeigt.");
     };
     reader.readAsText(file);
 }
@@ -114,11 +126,11 @@ function next() {
     
     currentCard = pool[Math.floor(Math.random() * pool.length)];
     
-    // ANZEIGE: Deutsch setzen
+    // DEUTSCH AUF DIE VORDERSEITE
     document.getElementById('v-de').innerText = currentCard.de;
     document.getElementById('hinweis').classList.remove('hidden');
     
-    // AUFLÖSUNG verstecken
+    // CHINESISCH VERSTECKEN
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
@@ -127,7 +139,7 @@ function next() {
 function flip() {
     if(!currentCard) return;
     
-    // AUFLÖSUNG: Chinesisch zeigen
+    // CHINESISCH ANZEIGEN
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');
@@ -149,7 +161,6 @@ function move(ok) {
     next();
 }
 
-// Initialisierung beim Start
 updateUI(); 
 next();
 </script>

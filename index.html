@@ -185,8 +185,8 @@ let lastMid = null;
 let lastTime = 0;
 let lastWidth = 8; 
 
-// Stärke der Glättung (0.5 = 50% alt, 50% neu) - je kleiner, desto weicher die Kurve
-const smoothingFactor = 0.4; 
+// STÄRKERE GLÄTTUNG: Nur noch 15% der neuen Bewegung wird sofort übernommen, der Rest folgt weich nach.
+const smoothingFactor = 0.15; 
 
 ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#2c3e50';
 
@@ -201,14 +201,12 @@ function startDrawing(e) {
     e.preventDefault(); 
     isDrawing = true; 
     
-    // Startpunkt holen
     let rawPoint = getPos(e);
     lastPoint = { x: rawPoint.x, y: rawPoint.y }; 
     lastMid = { x: rawPoint.x, y: rawPoint.y }; 
     lastTime = Date.now(); 
     lastWidth = 8; 
     
-    // Kleinen Startpunkt malen
     ctx.beginPath(); 
     ctx.arc(lastPoint.x, lastPoint.y, 4, 0, Math.PI*2); 
     ctx.fill(); 
@@ -221,16 +219,15 @@ function draw(e) {
     let rawPoint = getPos(e); 
     let now = Date.now();
     
-    // Low-Pass-Filter: Interpoliert sanft zwischen dem letzten und dem neuen Punkt
     let currentPoint = {
         x: lastPoint.x + (rawPoint.x - lastPoint.x) * smoothingFactor,
         y: lastPoint.y + (rawPoint.y - lastPoint.y) * smoothingFactor
     };
     
-    // Zittern ignorieren, wenn die Distanz zu klein ist (unter 2 Pixel)
+    // Zitter-Toleranz leicht erhöht (ignoriert Micro-Bewegungen unter 3 Pixeln)
     let distRawX = rawPoint.x - lastPoint.x;
     let distRawY = rawPoint.y - lastPoint.y;
-    if (Math.abs(distRawX) < 2 && Math.abs(distRawY) < 2) return;
+    if (Math.abs(distRawX) < 3 && Math.abs(distRawY) < 3) return;
 
     let dx = currentPoint.x - lastPoint.x; 
     let dy = currentPoint.y - lastPoint.y;
@@ -239,13 +236,11 @@ function draw(e) {
     
     let velocity = time > 0 ? distance/time : 0;
     
-    // Dicke des Pinsels weicher berechnen
     let targetWidth = Math.max(2, Math.min(10, 10 - velocity * 4));
     let currentWidth = lastWidth + (targetWidth - lastWidth) * 0.2;
     
     let midPoint = { x: (lastPoint.x + currentPoint.x)/2, y: (lastPoint.y + currentPoint.y)/2 };
     
-    // Weiche Bézier-Kurve zeichnen
     ctx.beginPath(); 
     ctx.moveTo(lastMid.x, lastMid.y); 
     ctx.quadraticCurveTo(lastPoint.x, lastPoint.y, midPoint.x, midPoint.y);

@@ -176,7 +176,7 @@ function move(ok) {
     updateUI(); next();
 }
 
-// --- KALLIGRAPHIE ---
+// --- KALLIGRAPHIE & GLÄTTUNGS-FILTER ---
 const canvas = document.getElementById('drawCanvas');
 const ctx = canvas.getContext('2d');
 let isDrawing = false;
@@ -184,6 +184,9 @@ let lastPoint = null;
 let lastMid = null;
 let lastTime = 0;
 let lastWidth = 8; 
+
+// Stärke der Glättung (0.5 = 50% alt, 50% neu) - je kleiner, desto weicher die Kurve
+const smoothingFactor = 0.4; 
 
 ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#2c3e50';
 
@@ -194,20 +197,65 @@ function getPos(e) {
     return { x: clientX - rect.left, y: clientY - rect.top };
 }
 
-function startDrawing(e) { e.preventDefault(); isDrawing = true; lastPoint = getPos(e); lastMid = lastPoint; lastTime = Date.now(); lastWidth = 8; ctx.beginPath(); ctx.arc(lastPoint.x, lastPoint.y, 4, 0, Math.PI*2); ctx.fill(); }
+function startDrawing(e) { 
+    e.preventDefault(); 
+    isDrawing = true; 
+    
+    // Startpunkt holen
+    let rawPoint = getPos(e);
+    lastPoint = { x: rawPoint.x, y: rawPoint.y }; 
+    lastMid = { x: rawPoint.x, y: rawPoint.y }; 
+    lastTime = Date.now(); 
+    lastWidth = 8; 
+    
+    // Kleinen Startpunkt malen
+    ctx.beginPath(); 
+    ctx.arc(lastPoint.x, lastPoint.y, 4, 0, Math.PI*2); 
+    ctx.fill(); 
+}
 
 function draw(e) {
-    if (!isDrawing) return; e.preventDefault();
-    let currentPoint = getPos(e); let now = Date.now();
-    let dx = currentPoint.x - lastPoint.x; let dy = currentPoint.y - lastPoint.y;
-    let distance = Math.sqrt(dx*dx + dy*dy); let time = now - lastTime;
+    if (!isDrawing) return; 
+    e.preventDefault();
+    
+    let rawPoint = getPos(e); 
+    let now = Date.now();
+    
+    // Low-Pass-Filter: Interpoliert sanft zwischen dem letzten und dem neuen Punkt
+    let currentPoint = {
+        x: lastPoint.x + (rawPoint.x - lastPoint.x) * smoothingFactor,
+        y: lastPoint.y + (rawPoint.y - lastPoint.y) * smoothingFactor
+    };
+    
+    // Zittern ignorieren, wenn die Distanz zu klein ist (unter 2 Pixel)
+    let distRawX = rawPoint.x - lastPoint.x;
+    let distRawY = rawPoint.y - lastPoint.y;
+    if (Math.abs(distRawX) < 2 && Math.abs(distRawY) < 2) return;
+
+    let dx = currentPoint.x - lastPoint.x; 
+    let dy = currentPoint.y - lastPoint.y;
+    let distance = Math.sqrt(dx*dx + dy*dy); 
+    let time = now - lastTime;
+    
     let velocity = time > 0 ? distance/time : 0;
-    let targetWidth = Math.max(2, Math.min(10, 10 - velocity*3));
-    let currentWidth = lastWidth + (targetWidth - lastWidth) * 0.3;
+    
+    // Dicke des Pinsels weicher berechnen
+    let targetWidth = Math.max(2, Math.min(10, 10 - velocity * 4));
+    let currentWidth = lastWidth + (targetWidth - lastWidth) * 0.2;
+    
     let midPoint = { x: (lastPoint.x + currentPoint.x)/2, y: (lastPoint.y + currentPoint.y)/2 };
-    ctx.beginPath(); ctx.moveTo(lastMid.x, lastMid.y); ctx.quadraticCurveTo(lastPoint.x, lastPoint.y, midPoint.x, midPoint.y);
-    ctx.lineWidth = currentWidth; ctx.stroke();
-    lastPoint = currentPoint; lastMid = midPoint; lastTime = now; lastWidth = currentWidth;
+    
+    // Weiche Bézier-Kurve zeichnen
+    ctx.beginPath(); 
+    ctx.moveTo(lastMid.x, lastMid.y); 
+    ctx.quadraticCurveTo(lastPoint.x, lastPoint.y, midPoint.x, midPoint.y);
+    ctx.lineWidth = currentWidth; 
+    ctx.stroke();
+    
+    lastPoint = currentPoint; 
+    lastMid = midPoint; 
+    lastTime = now; 
+    lastWidth = currentWidth;
 }
 
 function stopDrawing() { isDrawing = false; }

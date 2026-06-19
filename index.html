@@ -2,12 +2,14 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>HSK Trainer (Deutsch → Chinesisch)</title>
+    <title>HSK Leitner Trainer</title>
     <style>
         :root { --bg: #f0f2f5; --card: #fff; --box1: #e74c3c; --box5: #27ae60; --primary: #3498db; }
         body { font-family: sans-serif; background: var(--bg); padding: 20px; }
         .container { max-width: 500px; margin: auto; }
-        .stats { display: flex; justify-content: space-between; background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 20px; }
+        .stat-box { background: #fff; padding: 10px 5px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-size: 0.75rem; }
         .card { background: var(--card); padding: 40px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; cursor: pointer; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none; }
         button { width: 100%; padding: 15px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; }
@@ -16,14 +18,18 @@
 <body>
 
 <div class="container">
-    <h2>Deutsch → Chinesisch</h2>
+    <div class="nav">
+        <h2>HSK Leitner Pro</h2>
+        <input type="file" id="csvFile" class="hidden" onchange="importCSV(this.files[0])">
+        <button onclick="document.getElementById('csvFile').click()" style="width:auto; padding:10px;">CSV Import</button>
+    </div>
+
     <div class="stats" id="stats"></div>
 
     <div class="card" onclick="flip()">
-        <p style="color:#888; font-size:0.8rem;">(Tippe für die Lösung)</p>
-        <div id="v-de" style="font-size: 1.8rem; font-weight:bold;">Importiere Vokabeln...</div>
+        <div id="v-de" style="font-size: 1.5rem; font-weight:bold;">Importiere eine CSV-Datei...</div>
         <div id="v-hz" class="hidden" style="font-size: 3rem; margin: 15px; color: var(--primary);"></div>
-        <div id="v-py" class="hidden" style="font-size: 1.4rem; color: #555;"></div>
+        <div id="v-py" class="hidden" style="font-size: 1.3rem; color: #666;"></div>
     </div>
 
     <div id="controls" class="hidden">
@@ -33,26 +39,45 @@
 </div>
 
 <script>
-// Dein Speicher für den Fortschritt
 let state = JSON.parse(localStorage.getItem('hsk_data')) || { box1: [], box2: [], box3: [], box4: [], box5: [] };
 let currentCard = null;
 
-// Die Logik für den Wechsel (Deutsch ist jetzt der Schlüssel, Chinesisch die Lösung)
 function updateUI() {
-    document.getElementById('stats').innerHTML = [1,2,3,4,5].map(i => `<div>B${i}: ${state['box'+i].length}</div>`).join('');
+    document.getElementById('stats').innerHTML = [1,2,3,4,5].map(i => `<div class="stat-box">B${i}<br>${state['box'+i].length}</div>`).join('');
     localStorage.setItem('hsk_data', JSON.stringify(state));
 }
 
+function importCSV(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const rows = e.target.result.replace(/\r/g, "").split('\n');
+        rows.forEach(r => {
+            const parts = r.split(',');
+            if(parts.length >= 3) {
+                const [de, hz, py] = parts;
+                if(![1,2,3,4,5].some(i => state['box'+i].some(c => c.de === de.trim()))) {
+                    state.box1.push({de: de.trim(), hz: hz.trim(), py: py.trim()});
+                }
+            }
+        });
+        updateUI(); next();
+        alert("Import abgeschlossen!");
+    };
+    reader.readAsText(file);
+}
+
 function next() {
-    // Hier wählen wir die Karte aus einer Box
-    let pools = [1,2,3,4,5].filter(i => state['box'+i].length > 0);
-    if(pools.length === 0) { document.getElementById('v-de').innerText = "Bitte Vokabeln importieren!"; return; }
+    // Gewichtung: Box 1 ist am wahrscheinlichsten
+    let pool = [];
+    for(let i=1; i<=5; i++) {
+        // Box 1 bekommt "höhere Dichte" durch Mehrfach-Push
+        for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push({c, b:'box'+i}));
+    }
     
-    // Gewichtung: B1 wird häufiger gewählt
-    let box = (Math.random() < 0.4) ? 'box1' : 'box'+pools[Math.floor(Math.random()*pools.length)];
-    currentCard = state[box][Math.floor(Math.random() * state[box].length)];
+    if(pool.length === 0) return;
+    let choice = pool[Math.floor(Math.random() * pool.length)];
+    currentCard = choice.c;
     
-    // ANZEIGE: Deutsch zuerst
     document.getElementById('v-de').innerText = currentCard.de;
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
@@ -60,7 +85,7 @@ function next() {
 }
 
 function flip() {
-    // AUFLÖSUNG: Chinesisch
+    if(!currentCard) return;
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');
@@ -71,10 +96,8 @@ function flip() {
 function move(ok) {
     let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
     let idx = parseInt(oldBox[3]);
-    state[oldBox] = state[state[oldBox].indexOf(currentCard)]; // Entfernen
     state[oldBox] = state[oldBox].filter(c => c !== currentCard);
-    
-    let nextIdx = ok ? Math.min(idx + 1, 5) : 1;
+    let nextIdx = ok ? Math.min(idx + 1, 5) : Math.max(idx - 1, 1);
     state['box' + nextIdx].push(currentCard);
     updateUI(); next();
 }

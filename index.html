@@ -23,14 +23,13 @@
         button { width: 100%; padding: 15px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
         .btn-small { width: auto; padding: 10px 15px; font-size: 0.9rem; }
         
-        /* Das Zeichenfeld */
         #drawCanvas {
             border: 2px dashed #ccc;
             border-radius: 12px;
             background: #fafafa;
             touch-action: none;
             margin-top: 20px;
-            margin-bottom: 15px;
+            margin-bottom: 5px;
             cursor: crosshair;
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
         }
@@ -58,6 +57,8 @@
         
         <canvas id="drawCanvas" width="280" height="280" class="hidden"></canvas>
         
+        <button id="btn-clear" class="btn-small hidden" style="background: #95a5a6; color: white; margin-top: 5px;" onclick="clearCanvas()">Zeichnung löschen</button>
+        
         <button id="btn-show" class="hidden" style="background: var(--primary); color: white;" onclick="flip()">Lösung anzeigen</button>
         
         <div id="controls" class="hidden" style="display: flex; gap: 10px; width: 100%;">
@@ -68,7 +69,7 @@
 </div>
 
 <script>
-// --- DATENSPEICHER LOGIK ---
+// --- DATENSPEICHER & LOGIK ---
 let state = JSON.parse(localStorage.getItem('hsk_data')) || { box1: [], box2: [], box3: [], box4: [], box5: [] };
 let currentCard = null;
 
@@ -100,7 +101,6 @@ function importCSV(file) {
                 let c2 = parts[1] ? parts[1].trim() : "";
                 let c3 = parts[2] ? parts[2].trim() : "";
                 let c4 = parts[3] ? parts[3].trim() : "";
-                
                 let de = "", hz = "", py = "";
 
                 if (hasHanzi(c1)) {
@@ -120,18 +120,15 @@ function importCSV(file) {
                 }
             }
         });
-        
         document.getElementById('csvFile').value = ""; 
-        updateUI(); 
-        next();
-        alert(importCount + " Vokabeln erfolgreich importiert!");
+        updateUI(); next();
+        alert(importCount + " Vokabeln importiert!");
     };
     reader.readAsText(file);
 }
 
 function next() {
     clearCanvas(); 
-    
     let pool = [];
     for(let i=1; i<=5; i++) {
         for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push(c));
@@ -141,6 +138,7 @@ function next() {
         document.getElementById('v-de').innerText = "Bitte CSV importieren..."; 
         document.getElementById('drawCanvas').classList.add('hidden');
         document.getElementById('btn-show').classList.add('hidden');
+        document.getElementById('btn-clear').classList.add('hidden');
         document.getElementById('v-hz').classList.add('hidden');
         document.getElementById('v-py').classList.add('hidden');
         document.getElementById('controls').classList.add('hidden');
@@ -149,11 +147,10 @@ function next() {
     }
     
     currentCard = pool[Math.floor(Math.random() * pool.length)];
-    
     document.getElementById('v-de').innerText = currentCard.de;
     document.getElementById('drawCanvas').classList.remove('hidden');
     document.getElementById('btn-show').classList.remove('hidden');
-    
+    document.getElementById('btn-clear').classList.remove('hidden');
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
@@ -165,8 +162,8 @@ function flip() {
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');
     document.getElementById('v-py').classList.remove('hidden');
-    
     document.getElementById('btn-show').classList.add('hidden');
+    document.getElementById('btn-clear').classList.add('hidden');
     document.getElementById('controls').classList.remove('hidden');
 }
 
@@ -174,15 +171,12 @@ function move(ok) {
     let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
     let idx = parseInt(oldBox.replace('box', ''));
     state[oldBox] = state[oldBox].filter(c => c.de !== currentCard.de);
-    
     let nextIdx = ok ? Math.min(idx + 1, 5) : 1;
     state['box' + nextIdx].push(currentCard);
-    
-    updateUI(); 
-    next();
+    updateUI(); next();
 }
 
-// --- KALLIGRAPHIE LOGIK (CANVAS) ---
+// --- KALLIGRAPHIE ---
 const canvas = document.getElementById('drawCanvas');
 const ctx = canvas.getContext('2d');
 let isDrawing = false;
@@ -191,9 +185,7 @@ let lastMid = null;
 let lastTime = 0;
 let lastWidth = 8; 
 
-ctx.lineCap = 'round';
-ctx.lineJoin = 'round';
-ctx.strokeStyle = '#2c3e50';
+ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#2c3e50';
 
 function getPos(e) {
     let rect = canvas.getBoundingClientRect();
@@ -202,73 +194,29 @@ function getPos(e) {
     return { x: clientX - rect.left, y: clientY - rect.top };
 }
 
-function startDrawing(e) {
-    e.preventDefault(); 
-    isDrawing = true;
-    lastPoint = getPos(e);
-    lastMid = lastPoint;
-    lastTime = Date.now();
-    lastWidth = 8;
-    
-    ctx.beginPath();
-    ctx.arc(lastPoint.x, lastPoint.y, lastWidth / 2, 0, Math.PI * 2);
-    ctx.fillStyle = '#2c3e50';
-    ctx.fill();
-}
+function startDrawing(e) { e.preventDefault(); isDrawing = true; lastPoint = getPos(e); lastMid = lastPoint; lastTime = Date.now(); lastWidth = 8; ctx.beginPath(); ctx.arc(lastPoint.x, lastPoint.y, 4, 0, Math.PI*2); ctx.fill(); }
 
 function draw(e) {
-    if (!isDrawing) return;
-    e.preventDefault();
-    
-    let currentPoint = getPos(e);
-    let now = Date.now();
-    
-    let dx = currentPoint.x - lastPoint.x;
-    let dy = currentPoint.y - lastPoint.y;
-    let distance = Math.sqrt(dx * dx + dy * dy);
-    let time = now - lastTime;
-    let velocity = time > 0 ? distance / time : 0;
-    
-    let targetWidth = Math.max(2, Math.min(10, 10 - velocity * 3));
+    if (!isDrawing) return; e.preventDefault();
+    let currentPoint = getPos(e); let now = Date.now();
+    let dx = currentPoint.x - lastPoint.x; let dy = currentPoint.y - lastPoint.y;
+    let distance = Math.sqrt(dx*dx + dy*dy); let time = now - lastTime;
+    let velocity = time > 0 ? distance/time : 0;
+    let targetWidth = Math.max(2, Math.min(10, 10 - velocity*3));
     let currentWidth = lastWidth + (targetWidth - lastWidth) * 0.3;
-    
-    let midPoint = { 
-        x: (lastPoint.x + currentPoint.x) / 2, 
-        y: (lastPoint.y + currentPoint.y) / 2 
-    };
-    
-    ctx.beginPath();
-    ctx.moveTo(lastMid.x, lastMid.y);
-    ctx.quadraticCurveTo(lastPoint.x, lastPoint.y, midPoint.x, midPoint.y);
-    ctx.lineWidth = currentWidth;
-    ctx.stroke();
-    
-    lastPoint = currentPoint;
-    lastMid = midPoint;
-    lastTime = now;
-    lastWidth = currentWidth;
+    let midPoint = { x: (lastPoint.x + currentPoint.x)/2, y: (lastPoint.y + currentPoint.y)/2 };
+    ctx.beginPath(); ctx.moveTo(lastMid.x, lastMid.y); ctx.quadraticCurveTo(lastPoint.x, lastPoint.y, midPoint.x, midPoint.y);
+    ctx.lineWidth = currentWidth; ctx.stroke();
+    lastPoint = currentPoint; lastMid = midPoint; lastTime = now; lastWidth = currentWidth;
 }
 
-function stopDrawing() {
-    if (!isDrawing) return;
-    isDrawing = false;
-}
+function stopDrawing() { isDrawing = false; }
+function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
-function clearCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
+canvas.addEventListener('mousedown', startDrawing); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseup', stopDrawing); canvas.addEventListener('mouseout', stopDrawing);
+canvas.addEventListener('touchstart', startDrawing, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchend', stopDrawing);
 
-canvas.addEventListener('mousedown', startDrawing);
-canvas.addEventListener('mousemove', draw);
-canvas.addEventListener('mouseup', stopDrawing);
-canvas.addEventListener('mouseout', stopDrawing);
-
-canvas.addEventListener('touchstart', startDrawing, {passive: false});
-canvas.addEventListener('touchmove', draw, {passive: false});
-canvas.addEventListener('touchend', stopDrawing);
-
-updateUI(); 
-next();
+updateUI(); next();
 </script>
 </body>
 </html>

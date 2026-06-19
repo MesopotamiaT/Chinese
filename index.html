@@ -2,14 +2,14 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>HSK Leitner Trainer</title>
+    <title>HSK Leitner Trainer - Deutsch zuerst</title>
     <style>
         :root { --bg: #f0f2f5; --card: #fff; --box1: #e74c3c; --box5: #27ae60; --primary: #3498db; }
         body { font-family: sans-serif; background: var(--bg); padding: 20px; }
         .container { max-width: 500px; margin: auto; }
         .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 20px; }
-        .stat-box { background: #fff; padding: 10px 5px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-size: 0.75rem; }
+        .stat-box { background: #fff; padding: 10px 5px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-size: 0.75rem; font-weight: bold; }
         .card { background: var(--card); padding: 40px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; cursor: pointer; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none; }
         button { width: 100%; padding: 15px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; }
@@ -27,7 +27,9 @@
     <div class="stats" id="stats"></div>
 
     <div class="card" onclick="flip()">
-        <div id="v-de" style="font-size: 1.5rem; font-weight:bold;">Importiere eine CSV-Datei...</div>
+        <!-- DEUTSCH IST HIER IMMER SICHTBAR -->
+        <div id="v-de" style="font-size: 1.8rem; font-weight:bold;">Tippe zum Starten...</div>
+        <!-- CHINESISCH WIRD ERST BEIM FLIPPEN EINGEBLENDET -->
         <div id="v-hz" class="hidden" style="font-size: 3rem; margin: 15px; color: var(--primary);"></div>
         <div id="v-py" class="hidden" style="font-size: 1.3rem; color: #666;"></div>
     </div>
@@ -54,7 +56,9 @@ function importCSV(file) {
         rows.forEach(r => {
             const parts = r.split(',');
             if(parts.length >= 3) {
-                const [de, hz, py] = parts;
+                // Teile: HSK, Deutsch, Hanzi, Pinyin (index 1, 2, 3)
+                // Falls deine CSV kein HSK Level hat, nimm 0, 1, 2
+                const [hsk, de, hz, py] = parts.length === 4 ? parts : ["", parts[0], parts[1], parts[2]];
                 if(![1,2,3,4,5].some(i => state['box'+i].some(c => c.de === de.trim()))) {
                     state.box1.push({de: de.trim(), hz: hz.trim(), py: py.trim()});
                 }
@@ -67,18 +71,18 @@ function importCSV(file) {
 }
 
 function next() {
-    // Gewichtung: Box 1 ist am wahrscheinlichsten
     let pool = [];
     for(let i=1; i<=5; i++) {
-        // Box 1 bekommt "höhere Dichte" durch Mehrfach-Push
-        for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push({c, b:'box'+i}));
+        for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push(c));
     }
     
-    if(pool.length === 0) return;
-    let choice = pool[Math.floor(Math.random() * pool.length)];
-    currentCard = choice.c;
+    if(pool.length === 0) { document.getElementById('v-de').innerText = "Bitte CSV importieren!"; return; }
     
+    currentCard = pool[Math.floor(Math.random() * pool.length)];
+    
+    // ANZEIGE: Deutsch setzen
     document.getElementById('v-de').innerText = currentCard.de;
+    // AUFLÖSUNG verstecken
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
@@ -86,6 +90,7 @@ function next() {
 
 function flip() {
     if(!currentCard) return;
+    // AUFLÖSUNG zeigen
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');

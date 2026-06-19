@@ -3,12 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
-    <!-- Web-App Einstellungen für Vollbild -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="HSK Trainer">
-    <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#f0f2f5">
     
     <title>HSK Trainer</title>
@@ -16,24 +12,14 @@
         :root { --bg: #f0f2f5; --card: #fff; --box1: #e74c3c; --box5: #27ae60; --primary: #3498db; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; overscroll-behavior-y: contain; }
         .container { max-width: 500px; margin: auto; }
-        .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px; }
+        .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 20px; }
         .stat-box { background: #fff; padding: 10px 5px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0.75rem; font-weight: bold; }
         .card { background: var(--card); padding: 30px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; display: flex; flex-direction: column; align-items: center; }
         .hidden { display: none !important; }
         button { width: 100%; padding: 15px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
         .btn-small { width: auto; padding: 10px 15px; font-size: 0.9rem; }
-        
-        #drawCanvas {
-            border: 2px dashed #ccc;
-            border-radius: 12px;
-            background: #fafafa;
-            touch-action: none;
-            margin-top: 20px;
-            margin-bottom: 5px;
-            cursor: crosshair;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
-        }
+        #drawCanvas { border: 2px dashed #ccc; border-radius: 12px; background: #fafafa; touch-action: none; margin-top: 20px; margin-bottom: 5px; cursor: crosshair; }
     </style>
 </head>
 <body>
@@ -42,9 +28,9 @@
     <div class="nav">
         <h2 style="margin: 0; font-size: 1.2rem;">HSK Trainer</h2>
         <div style="display: flex; gap: 5px;">
-            <button class="btn-small" style="background: #e74c3c; color: white; margin: 0;" onclick="resetSpeicher()">Löschen</button>
+            <button class="btn-small" style="background: #e74c3c; color: white;" onclick="resetSpeicher()">Löschen</button>
             <input type="file" id="csvFile" class="hidden" onchange="importCSV(this.files[0])">
-            <button class="btn-small" style="background: var(--primary); color: white; margin: 0;" onclick="document.getElementById('csvFile').click()">+ CSV</button>
+            <button class="btn-small" style="background: var(--primary); color: white;" onclick="document.getElementById('csvFile').click()">+ CSV</button>
         </div>
     </div>
 
@@ -52,16 +38,11 @@
 
     <div class="card">
         <div id="v-de" style="font-size: 1.8rem; font-weight:bold;">Bitte CSV importieren...</div>
-        
         <div id="v-hz" class="hidden" style="font-size: 4rem; margin: 15px 0 5px 0; color: var(--primary); line-height: 1;"></div>
         <div id="v-py" class="hidden" style="font-size: 1.4rem; color: #555; margin-bottom: 10px;"></div>
-        
         <canvas id="drawCanvas" width="280" height="280" class="hidden"></canvas>
-        
         <button id="btn-clear" class="btn-small hidden" style="background: #95a5a6; color: white; margin-top: 5px;" onclick="clearCanvas()">Zeichnung löschen</button>
-        
         <button id="btn-show" class="hidden" style="background: var(--primary); color: white;" onclick="flip()">Lösung anzeigen</button>
-        
         <div id="controls" class="hidden" style="display: flex; gap: 10px; width: 100%;">
             <button style="background:var(--box1); color:white;" onclick="move(false)">Falsch</button>
             <button style="background:var(--box5); color:white;" onclick="move(true)">Richtig</button>
@@ -80,7 +61,7 @@ function updateUI() {
 }
 
 function resetSpeicher() {
-    if(confirm("Speicher löschen?")) {
+    if(confirm("Alles zurücksetzen?")) {
         state = { box1: [], box2: [], box3: [], box4: [], box5: [] };
         updateUI(); next();
     }
@@ -91,17 +72,22 @@ function importCSV(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
         const rows = e.target.result.replace(/\r/g, "").split('\n');
+        let count = 0;
         rows.forEach(r => {
-            const p = r.split(';');
-            if(p.length >= 3) state.box1.push({de: p[2], hz: p[0], py: p[1]});
+            const p = r.includes(';') ? r.split(';') : r.split(',');
+            if(p.length >= 3) {
+                state.box1.push({de: p[2].trim(), hz: p[0].trim(), py: p[1].trim()});
+                count++;
+            }
         });
         updateUI(); next();
+        alert(count + " Vokabeln geladen!");
     };
     reader.readAsText(file);
 }
 
 function next() {
-    clearCanvas(); 
+    clearCanvas();
     let pool = [];
     for(let i=1; i<=5; i++) for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push(c));
     if(pool.length === 0) return;
@@ -137,8 +123,7 @@ function move(ok) {
 // --- KALLIGRAPHIE LOGIK ---
 const canvas = document.getElementById('drawCanvas');
 const ctx = canvas.getContext('2d');
-let isDrawing = false;
-let points = [];
+let isDrawing = false, points = [];
 
 ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#2c3e50';
 
@@ -156,8 +141,7 @@ function draw(e) {
     e.preventDefault();
     points.push(getPos(e));
     if (points.length < 3) return;
-    let p1 = points[points.length - 2];
-    let p2 = points[points.length - 1];
+    let p1 = points[points.length - 2], p2 = points[points.length - 1];
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.quadraticCurveTo(p1.x, p1.y, p2.x, p2.y);

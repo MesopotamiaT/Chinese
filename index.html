@@ -2,41 +2,45 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>HSK Leitner Trainer - Deutsch zuerst</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSK Leitner Pro</title>
     <style>
         :root { --bg: #f0f2f5; --card: #fff; --box1: #e74c3c; --box5: #27ae60; --primary: #3498db; }
-        body { font-family: sans-serif; background: var(--bg); padding: 20px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333;}
         .container { max-width: 500px; margin: auto; }
-        .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px; }
         .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 20px; }
-        .stat-box { background: #fff; padding: 10px 5px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-size: 0.75rem; font-weight: bold; }
+        .stat-box { background: #fff; padding: 10px 5px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0.75rem; font-weight: bold; }
         .card { background: var(--card); padding: 40px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; cursor: pointer; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .hidden { display: none; }
-        button { width: 100%; padding: 15px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; }
+        .hidden { display: none !important; }
+        button { width: 100%; padding: 15px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .btn-small { width: auto; padding: 10px 15px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="nav">
-        <h2>HSK Leitner Pro</h2>
-        <input type="file" id="csvFile" class="hidden" onchange="importCSV(this.files[0])">
-        <button onclick="document.getElementById('csvFile').click()" style="width:auto; padding:10px;">CSV Import</button>
+        <h2 style="margin: 0; font-size: 1.2rem;">HSK Trainer</h2>
+        <div style="display: flex; gap: 5px;">
+            <button class="btn-small" style="background: #e74c3c; color: white; margin: 0;" onclick="resetSpeicher()">Löschen</button>
+            <input type="file" id="csvFile" class="hidden" onchange="importCSV(this.files[0])">
+            <button class="btn-small" style="background: var(--primary); color: white; margin: 0;" onclick="document.getElementById('csvFile').click()">+ CSV</button>
+        </div>
     </div>
 
     <div class="stats" id="stats"></div>
 
     <div class="card" onclick="flip()">
-        <!-- DEUTSCH IST HIER IMMER SICHTBAR -->
-        <div id="v-de" style="font-size: 1.8rem; font-weight:bold;">Tippe zum Starten...</div>
-        <!-- CHINESISCH WIRD ERST BEIM FLIPPEN EINGEBLENDET -->
-        <div id="v-hz" class="hidden" style="font-size: 3rem; margin: 15px; color: var(--primary);"></div>
-        <div id="v-py" class="hidden" style="font-size: 1.3rem; color: #666;"></div>
+        <p id="hinweis" style="color:#888; font-size:0.8rem; margin-top: 0;">(Tippe auf die Karte für die Lösung)</p>
+        <div id="v-de" style="font-size: 1.8rem; font-weight:bold;">Bitte CSV importieren...</div>
+        <div id="v-hz" class="hidden" style="font-size: 3.5rem; margin: 15px 0; color: var(--primary);"></div>
+        <div id="v-py" class="hidden" style="font-size: 1.4rem; color: #555;"></div>
     </div>
 
-    <div id="controls" class="hidden">
-        <button style="background:var(--box1); color:white;" onclick="move(false)">Nochmal (B1)</button>
-        <button style="background:var(--box5); color:white;" onclick="move(true)">Gewusst (Vor)</button>
+    <div id="controls" class="hidden" style="display: flex; gap: 10px;">
+        <button style="background:var(--box1); color:white;" onclick="move(false)">Falsch (B1)</button>
+        <button style="background:var(--box5); color:white;" onclick="move(true)">Richtig (Vor)</button>
     </div>
 </div>
 
@@ -49,23 +53,45 @@ function updateUI() {
     localStorage.setItem('hsk_data', JSON.stringify(state));
 }
 
+function resetSpeicher() {
+    if(confirm("Bist du sicher? Dein gesamter Fortschritt und alle Vokabeln werden gelöscht!")) {
+        state = { box1: [], box2: [], box3: [], box4: [], box5: [] };
+        updateUI();
+        next();
+        alert("Speicher wurde erfolgreich geleert. Du kannst jetzt neu importieren.");
+    }
+}
+
 function importCSV(file) {
+    if(!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
         const rows = e.target.result.replace(/\r/g, "").split('\n');
+        let importCount = 0;
+        
         rows.forEach(r => {
             const parts = r.split(',');
             if(parts.length >= 3) {
-                // Teile: HSK, Deutsch, Hanzi, Pinyin (index 1, 2, 3)
-                // Falls deine CSV kein HSK Level hat, nimm 0, 1, 2
-                const [hsk, de, hz, py] = parts.length === 4 ? parts : ["", parts[0], parts[1], parts[2]];
-                if(![1,2,3,4,5].some(i => state['box'+i].some(c => c.de === de.trim()))) {
-                    state.box1.push({de: de.trim(), hz: hz.trim(), py: py.trim()});
+                // Berücksichtigt CSVs mit 3 (De,Hz,Py) oder 4 (HSK,De,Hz,Py) Spalten
+                let de = parts.length >= 4 ? parts[1].trim() : parts[0].trim();
+                let hz = parts.length >= 4 ? parts[2].trim() : parts[1].trim();
+                let py = parts.length >= 4 ? parts[3].trim() : parts[2].trim();
+                
+                // Überschriften-Zeile ignorieren
+                if(de.toLowerCase() !== "deutsch" && de !== "") {
+                    // Duplikate verhindern
+                    if(![1,2,3,4,5].some(i => state['box'+i].some(c => c.de === de))) {
+                        state.box1.push({de: de, hz: hz, py: py});
+                        importCount++;
+                    }
                 }
             }
         });
-        updateUI(); next();
-        alert("Import abgeschlossen!");
+        
+        document.getElementById('csvFile').value = ""; // Reset File Input
+        updateUI(); 
+        next();
+        alert(importCount + " Vokabeln erfolgreich importiert!");
     };
     reader.readAsText(file);
 }
@@ -76,12 +102,22 @@ function next() {
         for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push(c));
     }
     
-    if(pool.length === 0) { document.getElementById('v-de').innerText = "Bitte CSV importieren!"; return; }
+    if(pool.length === 0) { 
+        document.getElementById('v-de').innerText = "Bitte CSV importieren..."; 
+        document.getElementById('v-hz').classList.add('hidden');
+        document.getElementById('v-py').classList.add('hidden');
+        document.getElementById('controls').classList.add('hidden');
+        document.getElementById('hinweis').classList.add('hidden');
+        currentCard = null;
+        return; 
+    }
     
     currentCard = pool[Math.floor(Math.random() * pool.length)];
     
     // ANZEIGE: Deutsch setzen
     document.getElementById('v-de').innerText = currentCard.de;
+    document.getElementById('hinweis').classList.remove('hidden');
+    
     // AUFLÖSUNG verstecken
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
@@ -90,24 +126,32 @@ function next() {
 
 function flip() {
     if(!currentCard) return;
-    // AUFLÖSUNG zeigen
+    
+    // AUFLÖSUNG: Chinesisch zeigen
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');
     document.getElementById('v-py').classList.remove('hidden');
+    
     document.getElementById('controls').classList.remove('hidden');
+    document.getElementById('hinweis').classList.add('hidden');
 }
 
 function move(ok) {
     let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
-    let idx = parseInt(oldBox[3]);
-    state[oldBox] = state[oldBox].filter(c => c !== currentCard);
-    let nextIdx = ok ? Math.min(idx + 1, 5) : Math.max(idx - 1, 1);
+    let idx = parseInt(oldBox.replace('box', ''));
+    state[oldBox] = state[oldBox].filter(c => c.de !== currentCard.de);
+    
+    let nextIdx = ok ? Math.min(idx + 1, 5) : 1;
     state['box' + nextIdx].push(currentCard);
-    updateUI(); next();
+    
+    updateUI(); 
+    next();
 }
 
-updateUI(); next();
+// Initialisierung beim Start
+updateUI(); 
+next();
 </script>
 </body>
 </html>

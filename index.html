@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
+    <!-- Web-App Einstellungen für Vollbild -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="HSK Trainer">
@@ -62,14 +63,14 @@
         <button id="btn-show" class="hidden" style="background: var(--primary); color: white;" onclick="flip()">Lösung anzeigen</button>
         
         <div id="controls" class="hidden" style="display: flex; gap: 10px; width: 100%;">
-            <button style="background:var(--box1); color:white;" onclick="move(false)">Falsch (B1)</button>
-            <button style="background:var(--box5); color:white;" onclick="move(true)">Richtig (Vor)</button>
+            <button style="background:var(--box1); color:white;" onclick="move(false)">Falsch</button>
+            <button style="background:var(--box5); color:white;" onclick="move(true)">Richtig</button>
         </div>
     </div>
 </div>
 
 <script>
-// --- DATENSPEICHER & LOGIK ---
+// --- DATENSPEICHER ---
 let state = JSON.parse(localStorage.getItem('hsk_data')) || { box1: [], box2: [], box3: [], box4: [], box5: [] };
 let currentCard = null;
 
@@ -79,10 +80,9 @@ function updateUI() {
 }
 
 function resetSpeicher() {
-    if(confirm("Speicher löschen und neu anfangen?")) {
+    if(confirm("Speicher löschen?")) {
         state = { box1: [], box2: [], box3: [], box4: [], box5: [] };
-        updateUI();
-        next();
+        updateUI(); next();
     }
 }
 
@@ -91,38 +91,11 @@ function importCSV(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
         const rows = e.target.result.replace(/\r/g, "").split('\n');
-        let importCount = 0;
-        const hasHanzi = (str) => /[\u4e00-\u9fa5]/.test(str);
-
         rows.forEach(r => {
-            const parts = r.split(',');
-            if(parts.length >= 3) {
-                let c1 = parts[0] ? parts[0].trim() : "";
-                let c2 = parts[1] ? parts[1].trim() : "";
-                let c3 = parts[2] ? parts[2].trim() : "";
-                let c4 = parts[3] ? parts[3].trim() : "";
-                let de = "", hz = "", py = "";
-
-                if (hasHanzi(c1)) {
-                    hz = c1; py = c2; de = c3;
-                    if(parts.length >= 4) de = c4;
-                } else if (hasHanzi(c2)) {
-                    de = c1; hz = c2; py = c3;
-                } else if (hasHanzi(c3)) {
-                    de = c2; hz = c3; py = c4;
-                }
-
-                if(de && hz && de.toLowerCase() !== "deutsch" && de.toLowerCase() !== "german") {
-                    if(![1,2,3,4,5].some(i => state['box'+i].some(c => c.de === de))) {
-                        state.box1.push({de: de, hz: hz, py: py});
-                        importCount++;
-                    }
-                }
-            }
+            const p = r.split(';');
+            if(p.length >= 3) state.box1.push({de: p[2], hz: p[0], py: p[1]});
         });
-        document.getElementById('csvFile').value = ""; 
         updateUI(); next();
-        alert(importCount + " Vokabeln importiert!");
     };
     reader.readAsText(file);
 }
@@ -130,22 +103,8 @@ function importCSV(file) {
 function next() {
     clearCanvas(); 
     let pool = [];
-    for(let i=1; i<=5; i++) {
-        for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push(c));
-    }
-    
-    if(pool.length === 0) { 
-        document.getElementById('v-de').innerText = "Bitte CSV importieren..."; 
-        document.getElementById('drawCanvas').classList.add('hidden');
-        document.getElementById('btn-show').classList.add('hidden');
-        document.getElementById('btn-clear').classList.add('hidden');
-        document.getElementById('v-hz').classList.add('hidden');
-        document.getElementById('v-py').classList.add('hidden');
-        document.getElementById('controls').classList.add('hidden');
-        currentCard = null;
-        return; 
-    }
-    
+    for(let i=1; i<=5; i++) for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push(c));
+    if(pool.length === 0) return;
     currentCard = pool[Math.floor(Math.random() * pool.length)];
     document.getElementById('v-de').innerText = currentCard.de;
     document.getElementById('drawCanvas').classList.remove('hidden');
@@ -157,7 +116,6 @@ function next() {
 }
 
 function flip() {
-    if(!currentCard) return;
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');
@@ -170,94 +128,51 @@ function flip() {
 function move(ok) {
     let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
     let idx = parseInt(oldBox.replace('box', ''));
-    state[oldBox] = state[oldBox].filter(c => c.de !== currentCard.de);
+    state[oldBox] = state[oldBox].filter(c => c !== currentCard);
     let nextIdx = ok ? Math.min(idx + 1, 5) : 1;
     state['box' + nextIdx].push(currentCard);
     updateUI(); next();
 }
 
-// --- KALLIGRAPHIE & GLÄTTUNGS-FILTER ---
+// --- KALLIGRAPHIE LOGIK ---
 const canvas = document.getElementById('drawCanvas');
 const ctx = canvas.getContext('2d');
 let isDrawing = false;
-let lastPoint = null;
-let lastMid = null;
-let lastTime = 0;
-let lastWidth = 8; 
-
-// STÄRKERE GLÄTTUNG: Nur noch 15% der neuen Bewegung wird sofort übernommen, der Rest folgt weich nach.
-const smoothingFactor = 0.15; 
+let points = [];
 
 ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#2c3e50';
 
 function getPos(e) {
     let rect = canvas.getBoundingClientRect();
-    let clientX = e.clientX || (e.touches && e.touches[0].clientX);
-    let clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    let clientY = e.touches ? e.touches[0].clientY : e.clientY;
     return { x: clientX - rect.left, y: clientY - rect.top };
 }
 
-function startDrawing(e) { 
-    e.preventDefault(); 
-    isDrawing = true; 
-    
-    let rawPoint = getPos(e);
-    lastPoint = { x: rawPoint.x, y: rawPoint.y }; 
-    lastMid = { x: rawPoint.x, y: rawPoint.y }; 
-    lastTime = Date.now(); 
-    lastWidth = 8; 
-    
-    ctx.beginPath(); 
-    ctx.arc(lastPoint.x, lastPoint.y, 4, 0, Math.PI*2); 
-    ctx.fill(); 
-}
+function startDrawing(e) { isDrawing = true; points = [getPos(e)]; }
 
 function draw(e) {
-    if (!isDrawing) return; 
+    if (!isDrawing) return;
     e.preventDefault();
-    
-    let rawPoint = getPos(e); 
-    let now = Date.now();
-    
-    let currentPoint = {
-        x: lastPoint.x + (rawPoint.x - lastPoint.x) * smoothingFactor,
-        y: lastPoint.y + (rawPoint.y - lastPoint.y) * smoothingFactor
-    };
-    
-    // Zitter-Toleranz leicht erhöht (ignoriert Micro-Bewegungen unter 3 Pixeln)
-    let distRawX = rawPoint.x - lastPoint.x;
-    let distRawY = rawPoint.y - lastPoint.y;
-    if (Math.abs(distRawX) < 3 && Math.abs(distRawY) < 3) return;
-
-    let dx = currentPoint.x - lastPoint.x; 
-    let dy = currentPoint.y - lastPoint.y;
-    let distance = Math.sqrt(dx*dx + dy*dy); 
-    let time = now - lastTime;
-    
-    let velocity = time > 0 ? distance/time : 0;
-    
-    let targetWidth = Math.max(2, Math.min(10, 10 - velocity * 4));
-    let currentWidth = lastWidth + (targetWidth - lastWidth) * 0.2;
-    
-    let midPoint = { x: (lastPoint.x + currentPoint.x)/2, y: (lastPoint.y + currentPoint.y)/2 };
-    
-    ctx.beginPath(); 
-    ctx.moveTo(lastMid.x, lastMid.y); 
-    ctx.quadraticCurveTo(lastPoint.x, lastPoint.y, midPoint.x, midPoint.y);
-    ctx.lineWidth = currentWidth; 
+    points.push(getPos(e));
+    if (points.length < 3) return;
+    let p1 = points[points.length - 2];
+    let p2 = points[points.length - 1];
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.quadraticCurveTo(p1.x, p1.y, p2.x, p2.y);
+    ctx.lineWidth = 6;
     ctx.stroke();
-    
-    lastPoint = currentPoint; 
-    lastMid = midPoint; 
-    lastTime = now; 
-    lastWidth = currentWidth;
 }
 
-function stopDrawing() { isDrawing = false; }
-function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+canvas.addEventListener('mousedown', startDrawing);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', () => isDrawing = false);
+canvas.addEventListener('touchstart', startDrawing, {passive: false});
+canvas.addEventListener('touchmove', draw, {passive: false});
+canvas.addEventListener('touchend', () => isDrawing = false);
 
-canvas.addEventListener('mousedown', startDrawing); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseup', stopDrawing); canvas.addEventListener('mouseout', stopDrawing);
-canvas.addEventListener('touchstart', startDrawing, {passive: false}); canvas.addEventListener('touchmove', draw, {passive: false}); canvas.addEventListener('touchend', stopDrawing);
+function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
 updateUI(); next();
 </script>

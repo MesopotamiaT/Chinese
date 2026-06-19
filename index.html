@@ -2,19 +2,31 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HSK Leitner Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HSK Leitner Pro - Zeichnen</title>
     <style>
         :root { --bg: #f0f2f5; --card: #fff; --box1: #e74c3c; --box5: #27ae60; --primary: #3498db; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333;}
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; overscroll-behavior-y: contain; }
         .container { max-width: 500px; margin: auto; }
         .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px; }
         .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 20px; }
         .stat-box { background: #fff; padding: 10px 5px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0.75rem; font-weight: bold; }
-        .card { background: var(--card); padding: 40px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; cursor: pointer; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .card { background: var(--card); padding: 30px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; display: flex; flex-direction: column; align-items: center; }
         .hidden { display: none !important; }
         button { width: 100%; padding: 15px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
         .btn-small { width: auto; padding: 10px 15px; font-size: 0.9rem; }
+        
+        /* Das Zeichenfeld */
+        #drawCanvas {
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            background: #fafafa;
+            touch-action: none; /* Verhindert das Scrollen beim Zeichnen */
+            margin-top: 20px;
+            margin-bottom: 15px;
+            cursor: crosshair;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+        }
     </style>
 </head>
 <body>
@@ -31,20 +43,25 @@
 
     <div class="stats" id="stats"></div>
 
-    <div class="card" onclick="flip()">
-        <p id="hinweis" style="color:#888; font-size:0.8rem; margin-top: 0;">(Tippe auf die Karte für die Lösung)</p>
+    <div class="card">
         <div id="v-de" style="font-size: 1.8rem; font-weight:bold;">Bitte CSV importieren...</div>
-        <div id="v-hz" class="hidden" style="font-size: 3.5rem; margin: 15px 0; color: var(--primary);"></div>
-        <div id="v-py" class="hidden" style="font-size: 1.4rem; color: #555;"></div>
-    </div>
-
-    <div id="controls" class="hidden" style="display: flex; gap: 10px;">
-        <button style="background:var(--box1); color:white;" onclick="move(false)">Falsch (B1)</button>
-        <button style="background:var(--box5); color:white;" onclick="move(true)">Richtig (Vor)</button>
+        
+        <div id="v-hz" class="hidden" style="font-size: 4rem; margin: 15px 0 5px 0; color: var(--primary); line-height: 1;"></div>
+        <div id="v-py" class="hidden" style="font-size: 1.4rem; color: #555; margin-bottom: 10px;"></div>
+        
+        <canvas id="drawCanvas" width="280" height="280" class="hidden"></canvas>
+        
+        <button id="btn-show" class="hidden" style="background: var(--primary); color: white;" onclick="flip()">Lösung anzeigen</button>
+        
+        <div id="controls" class="hidden" style="display: flex; gap: 10px; width: 100%;">
+            <button style="background:var(--box1); color:white;" onclick="move(false)">Falsch (B1)</button>
+            <button style="background:var(--box5); color:white;" onclick="move(true)">Richtig (Vor)</button>
+        </div>
     </div>
 </div>
 
 <script>
+// --- DATENSPEICHER LOGIK ---
 let state = JSON.parse(localStorage.getItem('hsk_data')) || { box1: [], box2: [], box3: [], box4: [], box5: [] };
 let currentCard = null;
 
@@ -67,8 +84,6 @@ function importCSV(file) {
     reader.onload = (e) => {
         const rows = e.target.result.replace(/\r/g, "").split('\n');
         let importCount = 0;
-        
-        // Prüft, ob ein String chinesische Zeichen enthält
         const hasHanzi = (str) => /[\u4e00-\u9fa5]/.test(str);
 
         rows.forEach(r => {
@@ -81,14 +96,13 @@ function importCSV(file) {
                 
                 let de = "", hz = "", py = "";
 
-                // Intelligente Spalten-Erkennung
                 if (hasHanzi(c1)) {
                     hz = c1; py = c2; de = c3;
-                    if(parts.length >= 4) de = c4; // Falls Format: Hanzi, Pinyin, Wortart, Deutsch
+                    if(parts.length >= 4) de = c4;
                 } else if (hasHanzi(c2)) {
-                    de = c1; hz = c2; py = c3;     // Format: Deutsch, Hanzi, Pinyin
+                    de = c1; hz = c2; py = c3;
                 } else if (hasHanzi(c3)) {
-                    de = c2; hz = c3; py = c4;     // Format: HSK-Level, Deutsch, Hanzi, Pinyin
+                    de = c2; hz = c3; py = c4;
                 }
 
                 if(de && hz && de.toLowerCase() !== "deutsch" && de.toLowerCase() !== "german") {
@@ -103,12 +117,14 @@ function importCSV(file) {
         document.getElementById('csvFile').value = ""; 
         updateUI(); 
         next();
-        alert(importCount + " Vokabeln erfolgreich importiert! Deutsch wird jetzt zuerst angezeigt.");
+        alert(importCount + " Vokabeln erfolgreich importiert!");
     };
     reader.readAsText(file);
 }
 
 function next() {
+    clearCanvas(); // Leinwand putzen
+    
     let pool = [];
     for(let i=1; i<=5; i++) {
         for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push(c));
@@ -116,21 +132,23 @@ function next() {
     
     if(pool.length === 0) { 
         document.getElementById('v-de').innerText = "Bitte CSV importieren..."; 
+        document.getElementById('drawCanvas').classList.add('hidden');
+        document.getElementById('btn-show').classList.add('hidden');
         document.getElementById('v-hz').classList.add('hidden');
         document.getElementById('v-py').classList.add('hidden');
         document.getElementById('controls').classList.add('hidden');
-        document.getElementById('hinweis').classList.add('hidden');
         currentCard = null;
         return; 
     }
     
     currentCard = pool[Math.floor(Math.random() * pool.length)];
     
-    // DEUTSCH AUF DIE VORDERSEITE
+    // ANZEIGE
     document.getElementById('v-de').innerText = currentCard.de;
-    document.getElementById('hinweis').classList.remove('hidden');
+    document.getElementById('drawCanvas').classList.remove('hidden');
+    document.getElementById('btn-show').classList.remove('hidden');
     
-    // CHINESISCH VERSTECKEN
+    // LÖSUNG VERSTECKEN
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
@@ -139,14 +157,15 @@ function next() {
 function flip() {
     if(!currentCard) return;
     
-    // CHINESISCH ANZEIGEN
+    // LÖSUNG ZEIGEN
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');
     document.getElementById('v-py').classList.remove('hidden');
     
+    // BUTTONS WECHSELN
+    document.getElementById('btn-show').classList.add('hidden');
     document.getElementById('controls').classList.remove('hidden');
-    document.getElementById('hinweis').classList.add('hidden');
 }
 
 function move(ok) {
@@ -161,6 +180,66 @@ function move(ok) {
     next();
 }
 
+
+// --- ZEICHEN LOGIK (CANVAS) ---
+const canvas = document.getElementById('drawCanvas');
+const ctx = canvas.getContext('2d');
+let isDrawing = false;
+
+// Pinsel Einstellungen
+ctx.lineWidth = 6;
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
+ctx.strokeStyle = '#2c3e50';
+
+function getPos(e) {
+    let rect = canvas.getBoundingClientRect();
+    let clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    let clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+    };
+}
+
+function startDrawing(e) {
+    e.preventDefault(); // Verhindert Scrollen am Handy
+    isDrawing = true;
+    let pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+}
+
+function draw(e) {
+    if (!isDrawing) return;
+    e.preventDefault();
+    let pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+}
+
+function stopDrawing() {
+    if (!isDrawing) return;
+    isDrawing = false;
+    ctx.closePath();
+}
+
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// Maus Events (für PC)
+canvas.addEventListener('mousedown', startDrawing);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', stopDrawing);
+canvas.addEventListener('mouseout', stopDrawing);
+
+// Touch Events (für Smartphone)
+canvas.addEventListener('touchstart', startDrawing, {passive: false});
+canvas.addEventListener('touchmove', draw, {passive: false});
+canvas.addEventListener('touchend', stopDrawing);
+
+// Initialisierung
 updateUI(); 
 next();
 </script>

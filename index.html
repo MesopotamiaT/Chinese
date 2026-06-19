@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HSK Leitner Pro - Zeichnen</title>
+    <title>HSK Leitner Pro - Kalligraphie</title>
     <style>
         :root { --bg: #f0f2f5; --card: #fff; --box1: #e74c3c; --box5: #27ae60; --primary: #3498db; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; overscroll-behavior-y: contain; }
@@ -21,7 +21,7 @@
             border: 2px dashed #ccc;
             border-radius: 12px;
             background: #fafafa;
-            touch-action: none; /* Verhindert das Scrollen beim Zeichnen */
+            touch-action: none;
             margin-top: 20px;
             margin-bottom: 15px;
             cursor: crosshair;
@@ -123,7 +123,7 @@ function importCSV(file) {
 }
 
 function next() {
-    clearCanvas(); // Leinwand putzen
+    clearCanvas(); 
     
     let pool = [];
     for(let i=1; i<=5; i++) {
@@ -143,12 +143,10 @@ function next() {
     
     currentCard = pool[Math.floor(Math.random() * pool.length)];
     
-    // ANZEIGE
     document.getElementById('v-de').innerText = currentCard.de;
     document.getElementById('drawCanvas').classList.remove('hidden');
     document.getElementById('btn-show').classList.remove('hidden');
     
-    // LÖSUNG VERSTECKEN
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
@@ -156,14 +154,11 @@ function next() {
 
 function flip() {
     if(!currentCard) return;
-    
-    // LÖSUNG ZEIGEN
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');
     document.getElementById('v-py').classList.remove('hidden');
     
-    // BUTTONS WECHSELN
     document.getElementById('btn-show').classList.add('hidden');
     document.getElementById('controls').classList.remove('hidden');
 }
@@ -180,14 +175,16 @@ function move(ok) {
     next();
 }
 
-
-// --- ZEICHEN LOGIK (CANVAS) ---
+// --- NEUE KALLIGRAPHIE LOGIK (CANVAS) ---
 const canvas = document.getElementById('drawCanvas');
 const ctx = canvas.getContext('2d');
 let isDrawing = false;
+let lastPoint = null;
+let lastMid = null;
+let lastTime = 0;
+let lastWidth = 8; // Startdicke
 
 // Pinsel Einstellungen
-ctx.lineWidth = 6;
 ctx.lineCap = 'round';
 ctx.lineJoin = 'round';
 ctx.strokeStyle = '#2c3e50';
@@ -196,50 +193,82 @@ function getPos(e) {
     let rect = canvas.getBoundingClientRect();
     let clientX = e.clientX || (e.touches && e.touches[0].clientX);
     let clientY = e.clientY || (e.touches && e.touches[0].clientY);
-    return {
-        x: clientX - rect.left,
-        y: clientY - rect.top
-    };
+    return { x: clientX - rect.left, y: clientY - rect.top };
 }
 
 function startDrawing(e) {
-    e.preventDefault(); // Verhindert Scrollen am Handy
+    e.preventDefault(); 
     isDrawing = true;
-    let pos = getPos(e);
+    lastPoint = getPos(e);
+    lastMid = lastPoint;
+    lastTime = Date.now();
+    lastWidth = 8;
+    
+    // Setzt einen schönen runden Punkt beim Aufsetzen des Stiftes
     ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
+    ctx.arc(lastPoint.x, lastPoint.y, lastWidth / 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#2c3e50';
+    ctx.fill();
 }
 
 function draw(e) {
     if (!isDrawing) return;
     e.preventDefault();
-    let pos = getPos(e);
-    ctx.lineTo(pos.x, pos.y);
+    
+    let currentPoint = getPos(e);
+    let now = Date.now();
+    
+    // Berechne Geschwindigkeit für die Pinseldicke
+    let dx = currentPoint.x - lastPoint.x;
+    let dy = currentPoint.y - lastPoint.y;
+    let distance = Math.sqrt(dx * dx + dy * dy);
+    let time = now - lastTime;
+    let velocity = time > 0 ? distance / time : 0;
+    
+    // Schnell = Dünn (min 2), Langsam = Dick (max 10)
+    let targetWidth = Math.max(2, Math.min(10, 10 - velocity * 3));
+    
+    // Weicher Übergang der Dicke
+    let currentWidth = lastWidth + (targetWidth - lastWidth) * 0.3;
+    
+    // Berechne Mittelpunkt für die weiche Kurve (Bézier)
+    let midPoint = { 
+        x: (lastPoint.x + currentPoint.x) / 2, 
+        y: (lastPoint.y + currentPoint.y) / 2 
+    };
+    
+    // Zeichne die Kurve
+    ctx.beginPath();
+    ctx.moveTo(lastMid.x, lastMid.y);
+    ctx.quadraticCurveTo(lastPoint.x, lastPoint.y, midPoint.x, midPoint.y);
+    ctx.lineWidth = currentWidth;
     ctx.stroke();
+    
+    // Werte für den nächsten Rahmen speichern
+    lastPoint = currentPoint;
+    lastMid = midPoint;
+    lastTime = now;
+    lastWidth = currentWidth;
 }
 
 function stopDrawing() {
     if (!isDrawing) return;
     isDrawing = false;
-    ctx.closePath();
 }
 
 function clearCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-// Maus Events (für PC)
 canvas.addEventListener('mousedown', startDrawing);
 canvas.addEventListener('mousemove', draw);
 canvas.addEventListener('mouseup', stopDrawing);
 canvas.addEventListener('mouseout', stopDrawing);
 
-// Touch Events (für Smartphone)
 canvas.addEventListener('touchstart', startDrawing, {passive: false});
 canvas.addEventListener('touchmove', draw, {passive: false});
 canvas.addEventListener('touchend', stopDrawing);
 
-// Initialisierung
 updateUI(); 
 next();
 </script>

@@ -2,15 +2,12 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HSK Leitner Pro</title>
+    <title>HSK Trainer (Deutsch → Chinesisch)</title>
     <style>
         :root { --bg: #f0f2f5; --card: #fff; --box1: #e74c3c; --box5: #27ae60; --primary: #3498db; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        body { font-family: sans-serif; background: var(--bg); padding: 20px; }
         .container { max-width: 500px; margin: auto; }
-        .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 20px; }
-        .stat-box { background: #fff; padding: 10px 5px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0.75rem; font-weight: bold; }
+        .stats { display: flex; justify-content: space-between; background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .card { background: var(--card); padding: 40px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; cursor: pointer; min-height: 200px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .hidden { display: none; }
         button { width: 100%; padding: 15px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; }
@@ -19,18 +16,14 @@
 <body>
 
 <div class="container">
-    <div class="nav">
-        <h2>HSK Trainer</h2>
-        <input type="file" id="csvFile" style="display:none" onchange="importCSV(this.files[0])">
-        <button onclick="document.getElementById('csvFile').click()" style="width:auto; padding: 10px;">CSV Import</button>
-    </div>
-
+    <h2>Deutsch → Chinesisch</h2>
     <div class="stats" id="stats"></div>
 
     <div class="card" onclick="flip()">
-        <div id="v-de" style="font-size: 1.5rem; font-weight:bold;">Datei importieren zum Starten</div>
-        <div id="v-hz" class="hidden" style="font-size: 3rem; margin: 15px;"></div>
-        <div id="v-py" class="hidden" style="font-size: 1.3rem; color: #666;"></div>
+        <p style="color:#888; font-size:0.8rem;">(Tippe für die Lösung)</p>
+        <div id="v-de" style="font-size: 1.8rem; font-weight:bold;">Importiere Vokabeln...</div>
+        <div id="v-hz" class="hidden" style="font-size: 3rem; margin: 15px; color: var(--primary);"></div>
+        <div id="v-py" class="hidden" style="font-size: 1.4rem; color: #555;"></div>
     </div>
 
     <div id="controls" class="hidden">
@@ -40,51 +33,26 @@
 </div>
 
 <script>
+// Dein Speicher für den Fortschritt
 let state = JSON.parse(localStorage.getItem('hsk_data')) || { box1: [], box2: [], box3: [], box4: [], box5: [] };
 let currentCard = null;
 
+// Die Logik für den Wechsel (Deutsch ist jetzt der Schlüssel, Chinesisch die Lösung)
 function updateUI() {
-    document.getElementById('stats').innerHTML = [1,2,3,4,5].map(i => `<div class="stat-box">B${i}<br>${state['box'+i].length}</div>`).join('');
+    document.getElementById('stats').innerHTML = [1,2,3,4,5].map(i => `<div>B${i}: ${state['box'+i].length}</div>`).join('');
     localStorage.setItem('hsk_data', JSON.stringify(state));
 }
 
-function importCSV(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const rows = e.target.result.replace(/\r/g, "").split('\n');
-        let count = 0;
-        rows.forEach(r => {
-            const parts = r.split(',');
-            if(parts.length >= 3) {
-                const [de, hz, py] = parts;
-                // Importiere, wenn Vokabel noch nirgendwo existiert
-                if(![1,2,3,4,5].some(i => state['box'+i].some(c => c.de === de.trim()))) {
-                    state.box1.push({de: de.trim(), hz: hz.trim(), py: py.trim()});
-                    count++;
-                }
-            }
-        });
-        updateUI(); next();
-        alert(count + " neue Vokabeln importiert!");
-    };
-    reader.readAsText(file);
-}
-
 function next() {
-    // Wahrscheinlichkeit: Box 1 am höchsten
-    let pool = [];
-    state.box1.forEach(() => pool.push('box1'));
-    state.box1.forEach(() => pool.push('box1')); // Gewichtung: Box 1 kommt doppelt so oft vor
-    state.box2.forEach(() => pool.push('box2'));
-    state.box3.forEach(() => pool.push('box3'));
-    state.box4.forEach(() => pool.push('box4'));
-    state.box5.forEach(() => pool.push('box5'));
-
-    let box = pool[Math.floor(Math.random() * pool.length)] || Object.keys(state).find(b => state[b].length > 0);
+    // Hier wählen wir die Karte aus einer Box
+    let pools = [1,2,3,4,5].filter(i => state['box'+i].length > 0);
+    if(pools.length === 0) { document.getElementById('v-de').innerText = "Bitte Vokabeln importieren!"; return; }
     
-    if(!box) { document.getElementById('v-de').innerText = "Bitte CSV importieren!"; return; }
-    
+    // Gewichtung: B1 wird häufiger gewählt
+    let box = (Math.random() < 0.4) ? 'box1' : 'box'+pools[Math.floor(Math.random()*pools.length)];
     currentCard = state[box][Math.floor(Math.random() * state[box].length)];
+    
+    // ANZEIGE: Deutsch zuerst
     document.getElementById('v-de').innerText = currentCard.de;
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
@@ -92,6 +60,7 @@ function next() {
 }
 
 function flip() {
+    // AUFLÖSUNG: Chinesisch
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');
@@ -102,7 +71,9 @@ function flip() {
 function move(ok) {
     let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
     let idx = parseInt(oldBox[3]);
+    state[oldBox] = state[state[oldBox].indexOf(currentCard)]; // Entfernen
     state[oldBox] = state[oldBox].filter(c => c !== currentCard);
+    
     let nextIdx = ok ? Math.min(idx + 1, 5) : 1;
     state['box' + nextIdx].push(currentCard);
     updateUI(); next();

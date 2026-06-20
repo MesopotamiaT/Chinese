@@ -59,7 +59,7 @@
         <div id="v-hz" class="hidden" style="font-size: 4rem; margin: 15px 0 5px 0; color: var(--primary); line-height: 1;"></div>
         <div id="v-py" class="hidden" style="font-size: 1.4rem; color: #555; margin-bottom: 10px;"></div>
         
-        <div id="writer-container" class="hidden" style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 20px; margin-bottom: 5px; width: 100%;"></div>
+        <div id="writer-container" class="hidden" style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-top: 20px; margin-bottom: 5px; width: 100%;"></div>
         
         <button id="btn-clear" class="btn-small hidden" style="background: #95a5a6; color: white; margin-top: 5px;" onclick="clearCanvas()">Neu versuchen</button>
         <button id="btn-show" class="hidden" style="background: var(--primary); color: white;" onclick="flip()">Lösung anzeigen</button>
@@ -115,7 +115,12 @@ function next() {
     if(pool.length === 0) { document.getElementById('v-de').innerText = "Bitte CSV importieren..."; return; }
     
     currentCard = pool[Math.floor(Math.random() * pool.length)];
-    document.getElementById('v-box').innerText = "Box " + Object.keys(state).find(k => state[k].includes(currentCard)).replace('box', '');
+    
+    // Anzeige der Box wiederhergestellt
+    const boxNum = Object.keys(state).find(k => state[k].includes(currentCard)).replace('box', '');
+    document.getElementById('v-box').innerText = "Box " + boxNum;
+    document.getElementById('v-box').classList.remove('hidden');
+
     document.getElementById('v-de').innerText = currentCard.de;
     
     const container = document.getElementById('writer-container');
@@ -126,9 +131,10 @@ function next() {
         if(/[\u4e00-\u9fa5]/.test(char)) {
             let div = document.createElement('div');
             div.className = 'char-box';
-            div.style.width = '120px'; div.style.height = '120px';
+            // Zeichenfeld vergrößert auf 180x180
+            div.style.width = '180px'; div.style.height = '180px';
             container.appendChild(div);
-            let writer = HanziWriter.create(div, char, { width: 120, height: 120, showCharacter: false, showOutline: false, padding: 5, strokeColor: '#3498db' });
+            let writer = HanziWriter.create(div, char, { width: 180, height: 180, showCharacter: false, showOutline: false, padding: 10, strokeColor: '#3498db' });
             writer.quiz();
             writers.push(writer);
         }

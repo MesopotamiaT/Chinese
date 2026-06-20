@@ -64,6 +64,7 @@
         <div id="controls" class="hidden" style="display: flex; gap: 10px; width: 100%;">
             <button style="background:var(--box1); color:white;" onclick="move(false)">Falsch (B1)</button>
             <button style="background:var(--box5); color:white;" onclick="move(true)">Richtig (Vor)</button>
+            <button style="background:#34495e; color:white;" onclick="moveToMax()">Weiß ich (B5)</button>
         </div>
     </div>
 </div>
@@ -173,6 +174,14 @@ function move(ok) {
     state[oldBox] = state[oldBox].filter(c => c.de !== currentCard.de);
     let nextIdx = ok ? Math.min(idx + 1, 5) : 1;
     state['box' + nextIdx].push(currentCard);
+    updateUI(); next();
+}
+
+function moveToMax() {
+    if(!currentCard) return;
+    let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
+    state[oldBox] = state[oldBox].filter(c => c.de !== currentCard.de);
+    state.box5.push(currentCard);
     updateUI(); next();
 }
 

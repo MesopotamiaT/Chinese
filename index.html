@@ -18,7 +18,7 @@
         .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px; }
         .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 20px; }
         .stat-box { background: #fff; padding: 10px 5px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0.75rem; font-weight: bold; }
-        .card { background: var(--card); padding: 30px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; display: flex; flex-direction: column; align-items: center; }
+        .card { background: var(--card); padding: 30px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; display: flex; flex-direction: column; align-items: center; position: relative; }
         .hidden { display: none !important; }
         button { width: 100%; padding: 15px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
         .btn-small { width: auto; padding: 10px 15px; font-size: 0.9rem; }
@@ -32,6 +32,17 @@
             margin-bottom: 5px;
             cursor: crosshair;
             box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        /* Neues Styling für die Box-Anzeige */
+        #v-box {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: white;
+            background: #95a5a6;
+            padding: 4px 12px;
+            border-radius: 12px;
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -50,6 +61,8 @@
     <div class="stats" id="stats"></div>
 
     <div class="card">
+        <div id="v-box" class="hidden"></div>
+        
         <div id="v-de" style="font-size: 1.8rem; font-weight:bold;">Bitte CSV importieren...</div>
         
         <div id="v-hz" class="hidden" style="font-size: 4rem; margin: 15px 0 5px 0; color: var(--primary); line-height: 1;"></div>
@@ -143,11 +156,18 @@ function next() {
         document.getElementById('v-hz').classList.add('hidden');
         document.getElementById('v-py').classList.add('hidden');
         document.getElementById('controls').classList.add('hidden');
+        document.getElementById('v-box').classList.add('hidden');
         currentCard = null;
         return; 
     }
     
     currentCard = pool[Math.floor(Math.random() * pool.length)];
+    
+    // NEU: Aktuelle Box ermitteln und anzeigen
+    let currentBoxName = Object.keys(state).find(k => state[k].includes(currentCard));
+    document.getElementById('v-box').innerText = currentBoxName.replace('box', 'Box ');
+    document.getElementById('v-box').classList.remove('hidden');
+
     document.getElementById('v-de').innerText = currentCard.de;
     document.getElementById('drawCanvas').classList.remove('hidden');
     document.getElementById('btn-show').classList.remove('hidden');

@@ -92,19 +92,35 @@ function importCSV(file) {
     reader.onload = (e) => {
         const rows = e.target.result.replace(/\r/g, "").split('\n');
         let importCount = 0;
+        
         rows.forEach(r => {
+            // Leere Zeilen ignorieren
+            if (!r.trim()) return;
+            
             const p = r.split(',');
+            
+            // Prüfen, ob mindestens 3 Spalten existieren
             if(p.length >= 3) {
-                let hz = p.find(s => /[\u4e00-\u9fa5]/.test(s));
-                let de = p.find(s => !/[\u4e00-\u9fa5]/.test(s) && !/^[a-z\d\s]+$/i.test(s));
-                let py = p.find(s => /^[a-z\d\s]+$/i.test(s));
+                // Spalte 1: Chinesische Zeichen (Index 0)
+                let hz = p[0].trim();
+                
+                // Spalte 2: Pinyin (Index 1)
+                let py = p[1].trim();
+                
+                // Spalte 3: Deutsch (Index 2 bis Ende, falls Kommas im Text sind)
+                let de = p.slice(2).join(',').trim();
+                
+                // Nur importieren, wenn Hanzi und Deutsch vorhanden sind
                 if(de && hz) {
-                    state.box1.push({de: de.trim(), hz: hz.trim(), py: (py || "").trim()});
+                    state.box1.push({de: de, hz: hz, py: py});
                     importCount++;
                 }
             }
         });
-        updateUI(); next(); alert(importCount + " importiert!");
+        
+        updateUI(); 
+        next(); 
+        alert(importCount + " Vokabeln erfolgreich importiert!");
     };
     reader.readAsText(file);
 }

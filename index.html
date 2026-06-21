@@ -134,40 +134,9 @@ function next() {
             // Zeichenfeld vergrößert auf 180x180
             div.style.width = '180px'; div.style.height = '180px';
             container.appendChild(div);
-            
-            // MODIFIZIERT: HanziWriter-Konfiguration angepasst
-            let charWriter = HanziWriter.create(div, char, {
-                width: 180, 
-                height: 180, 
-                showCharacter: false, // Standardmäßig versteckt
-                showOutline: false, // Umriss versteckt, um das Zeichnen zu fordern
-                padding: 10, 
-                strokeColor: '#3498db', // Pinsel-Bestätigungsfarbe
-                radicalColor: '#e74c3c', // Radikal-Farbe beibehalten, falls vorhanden
-                
-                // --- NEU: Visuelle Bestätigung des Pinselstils ---
-                drawingWidth: 10, // Dicker, um "krakelig" zu vermeiden
-                drawingColor: '#3498db' // Benutzer-Pinselstrich
-            });
-            
-            // Konfiguriere das Quiz mit Feedback und Animation
-            charWriter.quiz({
-                // Wenn ein Strich korrekt ist, zeichne ihn fest mit Pinselstil.
-                // Dies ist der "bestätigt"-Teil.
-                onCorrectStroke: function(strokeData) {
-                    // strokeData.strokeNum ist der Index des korrekten Strichs
-                    charWriter.animateStroke(strokeData.strokeNum); // Zeichne den Pinselstrich
-                },
-                
-                // Wenn das Zeichen vollständig ist, zeige es an.
-                onComplete: function() {
-                    charWriter.showCharacter();
-                    // Der Benutzer muss "Lösung anzeigen" klicken, um weiterzukommen,
-                    // daher beibehalten wir die Funktionalität.
-                }
-            });
-
-            writers.push(charWriter); // Originalfunktionalität beibehalten
+            let writer = HanziWriter.create(div, char, { width: 180, height: 180, showCharacter: false, showOutline: false, padding: 10, strokeColor: '#3498db' });
+            writer.quiz();
+            writers.push(writer);
         }
     });
 
@@ -201,17 +170,7 @@ function moveToMax() {
     updateUI(); next();
 }
 
-// MODIFIZIERT clearCanvas: Quiz mit Callbacks neu starten
-function clearCanvas() {
-    writers.forEach(w => {
-        w.cancelQuiz();
-        // Wir müssen das Quiz mit denselben Callbacks neu starten.
-        w.quiz({
-            onCorrectStroke: function(strokeData) { w.animateStroke(strokeData.strokeNum); },
-            onComplete: function() { w.showCharacter(); }
-        });
-    });
-}
+function clearCanvas() { writers.forEach(w => { w.cancelQuiz(); w.quiz(); }); }
 
 updateUI(); next();
 </script>

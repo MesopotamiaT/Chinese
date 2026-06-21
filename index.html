@@ -18,13 +18,14 @@
         :root { --bg: #f0f2f5; --card: #fff; --box1: #e74c3c; --box5: #27ae60; --primary: #3498db; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; overscroll-behavior-y: contain; }
         .container { max-width: 500px; margin: auto; }
-        .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px; }
+        .nav { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 10px; flex-wrap: wrap; }
+        .nav-buttons { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; flex: 1; }
         .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 20px; }
         .stat-box { background: #fff; padding: 10px 5px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0.75rem; font-weight: bold; }
         .card { background: var(--card); padding: 30px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); text-align: center; display: flex; flex-direction: column; align-items: center; position: relative; }
         .hidden { display: none !important; }
         button { width: 100%; padding: 15px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
-        .btn-small { width: auto; padding: 10px 15px; font-size: 0.9rem; }
+        .btn-small { width: auto; padding: 8px 12px; font-size: 0.85rem; }
         
         #v-box { font-size: 0.8rem; font-weight: bold; color: white; background: #95a5a6; padding: 4px 12px; border-radius: 12px; margin-bottom: 15px; }
         .char-box {
@@ -42,11 +43,16 @@
 
 <div class="container">
     <div class="nav">
-        <h2 style="margin: 0; font-size: 1.2rem;">HSK Trainer</h2>
-        <div style="display: flex; gap: 5px;">
-            <button class="btn-small" style="background: #e74c3c; color: white; margin: 0;" onclick="resetSpeicher()">Löschen</button>
-            <input type="file" id="csvFile" class="hidden" onchange="importCSV(this.files[0])">
+        <h2 style="margin: 0; font-size: 1.2rem; padding-top: 5px;">HSK Trainer</h2>
+        <div class="nav-buttons">
+            <input type="file" id="csvFile" class="hidden" onchange="importCSV(this.files[0])" accept=".csv">
             <button class="btn-small" style="background: var(--primary); color: white; margin: 0;" onclick="document.getElementById('csvFile').click()">+ CSV</button>
+            
+            <button class="btn-small" style="background: #f39c12; color: white; margin: 0;" onclick="exportProgress()">💾 Backup</button>
+            <input type="file" id="jsonFile" class="hidden" onchange="importProgress(this.files[0])" accept=".json">
+            <button class="btn-small" style="background: #27ae60; color: white; margin: 0;" onclick="document.getElementById('jsonFile').click()">📂 Laden</button>
+            
+            <button class="btn-small" style="background: #e74c3c; color: white; margin: 0;" onclick="resetSpeicher()">Löschen</button>
         </div>
     </div>
 
@@ -54,7 +60,7 @@
 
     <div class="card">
         <div id="v-box" class="hidden"></div>
-        <div id="v-de" style="font-size: 1.8rem; font-weight:bold;">Bitte CSV importieren...</div>
+        <div id="v-de" style="font-size: 1.8rem; font-weight:bold;">Bitte CSV oder Backup laden...</div>
         
         <div id="v-hz" class="hidden" style="font-size: 4rem; margin: 15px 0 5px 0; color: var(--primary); line-height: 1;"></div>
         <div id="v-py" class="hidden" style="font-size: 1.4rem; color: #555; margin-bottom: 10px;"></div>
@@ -85,7 +91,11 @@ function updateUI() {
 }
 
 function resetSpeicher() {
-    if(confirm("Speicher löschen?")) { state = { box1: [], box2: [], box3: [], box4: [], box5: [] }; updateUI(); next(); }
+    if(confirm("Bist du sicher? Dein gesamter Fortschritt wird gelöscht!")) { 
+        state = { box1: [], box2: [], box3: [], box4: [], box5: [] }; 
+        updateUI(); 
+        next(); 
+    }
 }
 
 function importCSV(file) {
@@ -113,7 +123,45 @@ function importCSV(file) {
         
         updateUI(); 
         next(); 
-        alert(importCount + " Vokabeln erfolgreich importiert!");
+        alert(importCount + " Vokabeln erfolgreich aus CSV importiert!");
+        document.getElementById('csvFile').value = ""; // Erlaubt erneutes Laden derselben Datei
+    };
+    reader.readAsText(file);
+}
+
+// NEU: Fortschritt als Datei speichern
+function exportProgress() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+    const dlAnchorElem = document.createElement('a');
+    dlAnchorElem.setAttribute("href", dataStr);
+    
+    // Generiert einen Dateinamen mit aktuellem Datum
+    const date = new Date().toISOString().split('T')[0];
+    dlAnchorElem.setAttribute("download", `hsk_fortschritt_${date}.json`);
+    dlAnchorElem.click();
+}
+
+// NEU: Fortschritt aus Datei laden
+function importProgress(file) {
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const importedState = JSON.parse(e.target.result);
+            
+            // Einfache Prüfung, ob die Datei das richtige Format hat
+            if(importedState.box1 && importedState.box5) {
+                state = importedState;
+                updateUI();
+                next();
+                alert("Lernfortschritt erfolgreich wiederhergestellt!");
+            } else {
+                alert("Die Datei hat nicht das richtige Format.");
+            }
+        } catch(err) {
+            alert("Fehler beim Lesen der Datei. Ist es eine gültige JSON-Datei?");
+        }
+        document.getElementById('jsonFile').value = ""; // Erlaubt erneutes Laden
     };
     reader.readAsText(file);
 }
@@ -121,7 +169,18 @@ function importCSV(file) {
 function next() {
     let pool = [];
     for(let i=1; i<=5; i++) for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push(c));
-    if(pool.length === 0) { document.getElementById('v-de').innerText = "Bitte CSV importieren..."; return; }
+    if(pool.length === 0) { 
+        document.getElementById('v-de').innerText = "Bitte CSV oder Backup laden..."; 
+        document.getElementById('v-box').classList.add('hidden');
+        document.getElementById('btn-show').classList.add('hidden');
+        document.getElementById('btn-clear').classList.add('hidden');
+        document.getElementById('btn-audio').classList.add('hidden');
+        document.getElementById('controls').classList.add('hidden');
+        document.getElementById('v-hz').classList.add('hidden');
+        document.getElementById('v-py').classList.add('hidden');
+        document.getElementById('writer-container').innerHTML = '';
+        return; 
+    }
     
     currentCard = pool[Math.floor(Math.random() * pool.length)];
     
@@ -149,7 +208,7 @@ function next() {
 
     document.getElementById('btn-show').classList.remove('hidden');
     document.getElementById('btn-clear').classList.remove('hidden');
-    document.getElementById('btn-audio').classList.add('hidden'); // NEU: Audio-Button bei neuer Karte verstecken
+    document.getElementById('btn-audio').classList.add('hidden');
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
@@ -161,25 +220,16 @@ function flip() {
     document.getElementById('v-hz').classList.remove('hidden');
     document.getElementById('v-py').classList.remove('hidden');
     document.getElementById('writer-container').classList.add('hidden');
-    document.getElementById('btn-show').classList.add('hidden'); // NEU: "Lösung anzeigen" ausblenden
-    document.getElementById('btn-audio').classList.remove('hidden'); // NEU: Audio-Button nach dem Umdrehen einblenden
+    document.getElementById('btn-show').classList.add('hidden');
+    document.getElementById('btn-audio').classList.remove('hidden');
     document.getElementById('controls').classList.remove('hidden');
 }
 
-// NEU: Funktion zur Sprachausgabe (Nutzt die integrierte Engine des Betriebssystems/Browsers)
 function speak() {
     if (!currentCard || !currentCard.hz) return;
-    
-    // Eventuell noch laufende Sprachausgaben sofort abbrechen (verhindert Überlappung bei schnellem Klicken)
     window.speechSynthesis.cancel();
-    
-    // Leerzeichen entfernen und Text-to-Speech Objekt erstellen
     const utterance = new SpeechSynthesisUtterance(currentCard.hz.replace(/\s/g, ''));
-    
-    // Sprache auf Chinesisch (Mandarin) festlegen
     utterance.lang = 'zh-CN';
-    
-    // Sprachausgabe starten
     window.speechSynthesis.speak(utterance);
 }
 

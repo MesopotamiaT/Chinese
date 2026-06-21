@@ -64,6 +64,8 @@
         <button id="btn-clear" class="btn-small hidden" style="background: #95a5a6; color: white; margin-top: 5px;" onclick="clearCanvas()">Neu versuchen</button>
         <button id="btn-show" class="hidden" style="background: var(--primary); color: white;" onclick="flip()">Lösung anzeigen</button>
         
+        <button id="btn-audio" class="hidden" style="background: #2ecc71; color: white;" onclick="speak()">🔊 Aussprache anhören</button>
+        
         <div id="controls" class="hidden" style="display: flex; gap: 10px; width: 100%;">
             <button style="background:var(--box1); color:white;" onclick="move(false)">Falsch (B1)</button>
             <button style="background:var(--box5); color:white;" onclick="move(true)">Richtig (Vor)</button>
@@ -94,23 +96,14 @@ function importCSV(file) {
         let importCount = 0;
         
         rows.forEach(r => {
-            // Leere Zeilen ignorieren
             if (!r.trim()) return;
-            
             const p = r.split(',');
             
-            // Prüfen, ob mindestens 3 Spalten existieren
             if(p.length >= 3) {
-                // Spalte 1: Chinesische Zeichen (Index 0)
                 let hz = p[0].trim();
-                
-                // Spalte 2: Pinyin (Index 1)
                 let py = p[1].trim();
-                
-                // Spalte 3: Deutsch (Index 2 bis Ende, falls Kommas im Text sind)
                 let de = p.slice(2).join(',').trim();
                 
-                // Nur importieren, wenn Hanzi und Deutsch vorhanden sind
                 if(de && hz) {
                     state.box1.push({de: de, hz: hz, py: py});
                     importCount++;
@@ -132,7 +125,6 @@ function next() {
     
     currentCard = pool[Math.floor(Math.random() * pool.length)];
     
-    // Anzeige der Box wiederhergestellt
     const boxNum = Object.keys(state).find(k => state[k].includes(currentCard)).replace('box', '');
     document.getElementById('v-box').innerText = "Box " + boxNum;
     document.getElementById('v-box').classList.remove('hidden');
@@ -147,7 +139,6 @@ function next() {
         if(/[\u4e00-\u9fa5]/.test(char)) {
             let div = document.createElement('div');
             div.className = 'char-box';
-            // Zeichenfeld vergrößert auf 180x180
             div.style.width = '180px'; div.style.height = '180px';
             container.appendChild(div);
             let writer = HanziWriter.create(div, char, { width: 180, height: 180, showCharacter: false, showOutline: false, padding: 10, strokeColor: '#3498db' });
@@ -158,6 +149,7 @@ function next() {
 
     document.getElementById('btn-show').classList.remove('hidden');
     document.getElementById('btn-clear').classList.remove('hidden');
+    document.getElementById('btn-audio').classList.add('hidden'); // NEU: Audio-Button bei neuer Karte verstecken
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
@@ -169,7 +161,26 @@ function flip() {
     document.getElementById('v-hz').classList.remove('hidden');
     document.getElementById('v-py').classList.remove('hidden');
     document.getElementById('writer-container').classList.add('hidden');
+    document.getElementById('btn-show').classList.add('hidden'); // NEU: "Lösung anzeigen" ausblenden
+    document.getElementById('btn-audio').classList.remove('hidden'); // NEU: Audio-Button nach dem Umdrehen einblenden
     document.getElementById('controls').classList.remove('hidden');
+}
+
+// NEU: Funktion zur Sprachausgabe (Nutzt die integrierte Engine des Betriebssystems/Browsers)
+function speak() {
+    if (!currentCard || !currentCard.hz) return;
+    
+    // Eventuell noch laufende Sprachausgaben sofort abbrechen (verhindert Überlappung bei schnellem Klicken)
+    window.speechSynthesis.cancel();
+    
+    // Leerzeichen entfernen und Text-to-Speech Objekt erstellen
+    const utterance = new SpeechSynthesisUtterance(currentCard.hz.replace(/\s/g, ''));
+    
+    // Sprache auf Chinesisch (Mandarin) festlegen
+    utterance.lang = 'zh-CN';
+    
+    // Sprachausgabe starten
+    window.speechSynthesis.speak(utterance);
 }
 
 function move(ok) {

@@ -99,7 +99,7 @@
             cursor: crosshair;
         }
 
-        /* Styling für den neuen Beispielsatz-Bereich */
+        /* Styling für den Beispielsatz-Bereich */
         .example-box {
             margin-top: 15px;
             padding-top: 15px;
@@ -193,7 +193,6 @@ function importCSV(file) {
                 let py = p[1].trim();
                 let de = p[2].trim();
                 
-                // Optionale Spalten 4, 5 und 6 für den Beispielsatz auslesen
                 let sentenceHz = p[3] ? p[3].trim() : '';
                 let sentencePy = p[4] ? p[4].trim() : '';
                 let sentenceDe = p[5] ? p[5].trim() : '';
@@ -276,6 +275,12 @@ function next() {
 
     document.getElementById('v-de').innerText = currentCard.de;
     
+    // CRITICAL FIX: Beispielsatz-Texte komplett leeren und Box verstecken bei neuer Karte
+    document.getElementById('ex-hz').innerText = '';
+    document.getElementById('ex-py').innerText = '';
+    document.getElementById('ex-de').innerText = '';
+    document.getElementById('v-example').classList.add('hidden');
+
     const container = document.getElementById('writer-container');
     container.innerHTML = ''; 
     container.classList.remove('hidden');
@@ -309,7 +314,6 @@ function next() {
     document.getElementById('btn-audio').classList.add('hidden');
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
-    document.getElementById('v-example').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
 }
 
@@ -319,14 +323,12 @@ function flip() {
     document.getElementById('v-hz').classList.remove('hidden');
     document.getElementById('v-py').classList.remove('hidden');
     
-    // Beispielsatz anzeigen, falls vorhanden
+    // Beispielsatz erst HIER beim Umdrehen befüllen und sichtbar machen
     if (currentCard.sentenceHz || currentCard.sentencePy || currentCard.sentenceDe) {
         document.getElementById('ex-hz').innerText = currentCard.sentenceHz || '';
         document.getElementById('ex-py').innerText = currentCard.sentencePy || '';
         document.getElementById('ex-de').innerText = currentCard.sentenceDe || '';
         document.getElementById('v-example').classList.remove('hidden');
-    } else {
-        document.getElementById('v-example').classList.add('hidden');
     }
     
     const container = document.getElementById('writer-container');

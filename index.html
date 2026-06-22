@@ -30,7 +30,7 @@
             color: #333; 
             overscroll-behavior-y: contain; 
         }
-        .container { max-width: 500px; margin: auto; }
+        .container { max-width: 600px; margin: auto; }
         .nav { 
             display: flex; 
             justify-content: space-between; 
@@ -86,10 +86,9 @@
             width: 100%;
         }
         .char-box {
-            flex: 1;
-            min-width: 100px;
-            max-width: 140px;
-            aspect-ratio: 1 / 1;
+            flex: 0 0 200px;
+            width: 200px;
+            height: 200px;
             border: 2px dashed #ccc;
             border-radius: 12px;
             background: linear-gradient(to right, transparent 49%, #e0e0e0 49%, #e0e0e0 51%, transparent 51%),
@@ -99,37 +98,17 @@
             cursor: crosshair;
         }
 
-        /* 100% GARANTIERTES STACKING FÜR DIE SÄTZE */
         .example-box {
             margin-top: 15px;
             padding-top: 15px;
             border-top: 1px dashed #e0e0e0;
             width: 100%;
             text-align: center;
-            display: block; /* Fallback statt Flexbox */
+            display: block;
         }
-        .ex-hz { 
-            display: block; 
-            font-size: 1.3rem; 
-            color: #2c3e50; 
-            font-weight: 500; 
-            word-break: break-word; 
-            margin-bottom: 8px; /* Fester Abstand nach unten */
-        }
-        .ex-py { 
-            display: block; 
-            font-size: 1rem; 
-            color: #7f8c8d; 
-            font-style: italic; 
-            word-break: break-word; 
-            margin-bottom: 8px; 
-        }
-        .ex-de { 
-            display: block; 
-            font-size: 1rem; 
-            color: #34495e; 
-            word-break: break-word; 
-        }
+        .ex-hz { display: block; font-size: 1.3rem; color: #2c3e50; font-weight: 500; word-break: break-word; margin-bottom: 8px; }
+        .ex-py { display: block; font-size: 1rem; color: #7f8c8d; font-style: italic; word-break: break-word; margin-bottom: 8px; }
+        .ex-de { display: block; font-size: 1rem; color: #34495e; word-break: break-word; }
     </style>
 </head>
 <body>
@@ -140,11 +119,9 @@
         <div class="nav-buttons">
             <input type="file" id="csvFile" class="hidden" onchange="importCSV(this.files[0])" accept=".csv">
             <button class="btn-small" style="background: var(--primary); color: white;" onclick="document.getElementById('csvFile').click()">+ CSV</button>
-            
             <button class="btn-small" style="background: #f39c12; color: white;" onclick="exportProgress()">💾 Backup</button>
             <input type="file" id="jsonFile" class="hidden" onchange="importProgress(this.files[0])" accept=".json">
             <button class="btn-small" style="background: #27ae60; color: white;" onclick="document.getElementById('jsonFile').click()">📂 Laden</button>
-            
             <button class="btn-small" style="background: #e74c3c; color: white;" onclick="resetSpeicher()">Löschen</button>
         </div>
     </div>
@@ -203,37 +180,16 @@ function importCSV(file) {
     reader.onload = (e) => {
         const rows = e.target.result.replace(/\r/g, "").split('\n');
         let importCount = 0;
-        
         rows.forEach(r => {
             if (!r.trim()) return;
             const p = r.split(',');
-            
             if(p.length >= 3) {
-                let hz = p[0].trim();
-                let py = p[1].trim();
-                let de = p[2].trim();
-                
-                let sentenceHz = p[3] ? p[3].trim() : '';
-                let sentencePy = p[4] ? p[4].trim() : '';
-                let sentenceDe = p[5] ? p[5].trim() : '';
-                
-                if(de && hz) {
-                    state.box1.push({
-                        de: de, 
-                        hz: hz, 
-                        py: py,
-                        sentenceHz: sentenceHz,
-                        sentencePy: sentencePy,
-                        sentenceDe: sentenceDe
-                    });
-                    importCount++;
-                }
+                state.box1.push({hz: p[0].trim(), py: p[1].trim(), de: p[2].trim(), sentenceHz: p[3]||'', sentencePy: p[4]||'', sentenceDe: p[5]||''});
+                importCount++;
             }
         });
-        
-        updateUI(); 
-        next(); 
-        alert(importCount + " Vokabeln erfolgreich aus CSV importiert!");
+        updateUI(); next(); 
+        alert(importCount + " Vokabeln geladen!");
         document.getElementById('csvFile').value = "";
     };
     reader.readAsText(file);
@@ -243,8 +199,7 @@ function exportProgress() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
     const dlAnchorElem = document.createElement('a');
     dlAnchorElem.setAttribute("href", dataStr);
-    const date = new Date().toISOString().split('T')[0];
-    dlAnchorElem.setAttribute("download", `hsk_fortschritt_${date}.json`);
+    dlAnchorElem.setAttribute("download", "hsk_backup.json");
     dlAnchorElem.click();
 }
 
@@ -252,20 +207,8 @@ function importProgress(file) {
     if(!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
-        try {
-            const importedState = JSON.parse(e.target.result);
-            if(importedState.box1 && importedState.box5) {
-                state = importedState;
-                updateUI();
-                next();
-                alert("Lernfortschritt erfolgreich wiederhergestellt!");
-            } else {
-                alert("Die Datei hat nicht das richtige Format.");
-            }
-        } catch(err) {
-            alert("Fehler beim Lesen der Datei. Ist es eine gültige JSON-Datei?");
-        }
-        document.getElementById('jsonFile').value = "";
+        state = JSON.parse(e.target.result);
+        updateUI(); next();
     };
     reader.readAsText(file);
 }
@@ -273,56 +216,24 @@ function importProgress(file) {
 function next() {
     let pool = [];
     for(let i=1; i<=5; i++) for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push(c));
-    if(pool.length === 0) { 
-        document.getElementById('v-de').innerText = "Bitte CSV oder Backup laden..."; 
-        document.getElementById('v-box').classList.add('hidden');
-        document.getElementById('btn-show').classList.add('hidden');
-        document.getElementById('btn-clear').classList.add('hidden');
-        document.getElementById('btn-audio').classList.add('hidden');
-        document.getElementById('controls').classList.add('hidden');
-        document.getElementById('v-hz').classList.add('hidden');
-        document.getElementById('v-py').classList.add('hidden');
-        document.getElementById('v-example').classList.add('hidden');
-        document.getElementById('writer-container').innerHTML = '';
-        return; 
-    }
+    if(pool.length === 0) return;
     
     currentCard = pool[Math.floor(Math.random() * pool.length)];
-    
     const boxNum = Object.keys(state).find(k => state[k].includes(currentCard)).replace('box', '');
     document.getElementById('v-box').innerText = "Box " + boxNum;
-    document.getElementById('v-box').classList.remove('hidden');
-
     document.getElementById('v-de').innerText = currentCard.de;
     
-    document.getElementById('ex-hz').innerText = '';
-    document.getElementById('ex-py').innerText = '';
-    document.getElementById('ex-de').innerText = '';
-    document.getElementById('v-example').classList.add('hidden');
-
     const container = document.getElementById('writer-container');
     container.innerHTML = ''; 
     container.classList.remove('hidden');
     writers = [];
     
-    const characters = currentCard.hz.replace(/\s/g, '').split('');
-    
-    characters.forEach(char => {
+    currentCard.hz.replace(/\s/g, '').split('').forEach(char => {
         if(/[\u4e00-\u9fa5]/.test(char)) {
             let div = document.createElement('div');
             div.className = 'char-box';
             container.appendChild(div);
-            
-            let size = div.clientWidth || 120; 
-            
-            let writer = HanziWriter.create(div, char, { 
-                width: size, 
-                height: size, 
-                showCharacter: false, 
-                showOutline: false, 
-                padding: 5, 
-                strokeColor: '#3498db' 
-            });
+            let writer = HanziWriter.create(div, char, { width: 200, height: 200, showCharacter: false, showOutline: false, padding: 10, strokeColor: '#3498db' });
             writer.quiz();
             writers.push(writer);
         }
@@ -330,9 +241,10 @@ function next() {
 
     document.getElementById('btn-show').classList.remove('hidden');
     document.getElementById('btn-clear').classList.remove('hidden');
-    document.getElementById('btn-audio').classList.add('hidden');
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
+    document.getElementById('v-example').classList.add('hidden');
+    document.getElementById('btn-audio').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
 }
 
@@ -341,18 +253,13 @@ function flip() {
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');
     document.getElementById('v-py').classList.remove('hidden');
-    
-    if (currentCard.sentenceHz || currentCard.sentencePy || currentCard.sentenceDe) {
-        document.getElementById('ex-hz').innerText = currentCard.sentenceHz || '';
-        document.getElementById('ex-py').innerText = currentCard.sentencePy || '';
-        document.getElementById('ex-de').innerText = currentCard.sentenceDe || '';
+    if (currentCard.sentenceHz) {
+        document.getElementById('ex-hz').innerText = currentCard.sentenceHz;
+        document.getElementById('ex-py').innerText = currentCard.sentencePy;
+        document.getElementById('ex-de').innerText = currentCard.sentenceDe;
         document.getElementById('v-example').classList.remove('hidden');
     }
-    
-    const container = document.getElementById('writer-container');
-    container.innerHTML = '';
-    container.classList.add('hidden');
-    
+    document.getElementById('writer-container').classList.add('hidden');
     document.getElementById('btn-show').classList.add('hidden');
     document.getElementById('btn-clear').classList.add('hidden');
     document.getElementById('btn-audio').classList.remove('hidden');
@@ -360,23 +267,21 @@ function flip() {
 }
 
 function speak() {
-    if (!currentCard || !currentCard.hz) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(currentCard.hz.replace(/\s/g, ''));
-    utterance.lang = 'zh-CN';
-    window.speechSynthesis.speak(utterance);
+    const u = new SpeechSynthesisUtterance(currentCard.hz.replace(/\s/g, ''));
+    u.lang = 'zh-CN';
+    window.speechSynthesis.speak(u);
 }
 
 function move(ok) {
     let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
-    state[oldBox] = state[oldBox].filter(c => c.de !== currentCard.de);
+    state[oldBox] = state[oldBox].filter(c => c !== currentCard);
     state['box' + (ok ? Math.min(parseInt(oldBox.replace('box','')) + 1, 5) : 1)].push(currentCard);
     updateUI(); next();
 }
 
 function moveToMax() {
     let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
-    state[oldBox] = state[oldBox].filter(c => c.de !== currentCard.de);
+    state[oldBox] = state[oldBox].filter(c => c !== currentCard);
     state.box5.push(currentCard);
     updateUI(); next();
 }

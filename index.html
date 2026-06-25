@@ -61,8 +61,9 @@
         <button id="btn-audio" class="hidden" style="background: var(--primary); color: white;" onclick="speak()">🔊 Aussprache</button>
         
         <div id="controls" class="hidden" style="display: flex; gap: 10px; width: 100%; margin-top: 10px;">
-            <button style="background:var(--box1); color:white;" onclick="move(false)">Falsch</button>
-            <button style="background:var(--box5); color:white;" onclick="move(true)">Richtig</button>
+            <button style="background:var(--box1); color:white;" onclick="move(-1)">Falsch</button>
+            <button style="background:#9b59b6; color:white;" onclick="move(0)">Halten</button>
+            <button style="background:var(--box5); color:white;" onclick="move(1)">Richtig</button>
         </div>
     </div>
 </div>
@@ -106,7 +107,7 @@ function next() {
     // UI Reset
     document.getElementById('writer-container').classList.remove('hidden');
     document.getElementById('writer-container').innerHTML = '';
-    writers = []; // Bugfix: Array zurücksetzen, um Memory Leak zu verhindern
+    writers = []; 
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
     document.getElementById('v-example').classList.add('hidden');
@@ -143,10 +144,16 @@ function flip() {
     document.getElementById('controls').classList.remove('hidden');
 }
 
-function move(ok) {
+function move(step) {
     let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
+    let level = parseInt(oldBox.replace('box',''));
+    
     state[oldBox] = state[oldBox].filter(c => c !== currentCard);
-    state['box' + (ok ? Math.min(parseInt(oldBox.replace('box','')) + 1, 5) : 1)].push(currentCard);
+    
+    // Berechnet die neue Box (Minimum 1, Maximum 5)
+    let newLevel = Math.min(Math.max(level + step, 1), 5);
+    state['box' + newLevel].push(currentCard);
+    
     updateUI(); next();
 }
 

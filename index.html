@@ -54,7 +54,6 @@
             color: var(--text-muted);
         }
         
-        /* Farb-Indikatoren für Boxen im inaktiven Zustand leicht dezent halten */
         #stat-box-1 { color: var(--box1); }
         #stat-box-2 { color: var(--box2); }
         #stat-box-3 { color: var(--box3); }
@@ -83,7 +82,6 @@
         
         .hidden { display: none !important; }
         
-        /* Professionelles Button-Design */
         button { 
             width: 100%; 
             padding: 15px; 
@@ -107,7 +105,6 @@
             box-shadow: none;
         }
         
-        /* Infoleiste auf der Karte */
         #v-box { 
             font-size: 0.85rem; 
             font-weight: 700; 
@@ -133,7 +130,6 @@
         
         /* Große Schriftzeichen-Anzeige nach dem Umdrehen */
         #v-hz {
-            font-weight: 700;
             text-shadow: 0 4px 12px rgba(0,0,0,0.03);
             margin: 20px 0;
         }
@@ -355,7 +351,9 @@ function flip() {
     let cardLevel = currentCard.level || "Unbekannt";
     document.getElementById('v-box').innerText = "Stufe: " + cardLevel;
 
+    // OPTIMIERUNG: Schriftgröße bleibt bei 7rem, die Strichstärke/Dicke wird jedoch elegant reduziert (font-weight: 300)
     document.getElementById('v-hz').style.fontSize = "7rem";
+    document.getElementById('v-hz').style.fontWeight = "300";
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');

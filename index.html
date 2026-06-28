@@ -93,7 +93,28 @@ function updateUI() {
     localStorage.setItem('hsk_data', JSON.stringify(state));
 }
 
-/* KORRIGIERTE FUNKTION: Setzt fälschlicherweise gesplittete deutsche Sätze wieder zusammen */
+// Hilfsfunktion: Teilt CSV-Zeilen intelligent auf und ignoriert Kommas in Anführungszeichen
+function parseCSVLine(text) {
+    let fields = [];
+    let field = "";
+    let inQuotes = false;
+    
+    for (let i = 0; i < text.length; i++) {
+        let char = text[i];
+        if (char === '"') {
+            inQuotes = !inQuotes; // Wechselt Zustand, wenn Anführungszeichen gefunden wird
+        } else if (char === ',' && !inQuotes) {
+            fields.push(field.trim());
+            field = "";
+        } else {
+            field += char;
+        }
+    }
+    fields.push(field.trim());
+    return fields;
+}
+
+/* NEU & INTELLIGENT: Verarbeitet jetzt auch Excel/Numbers-Anführungszeichen korrekt */
 function importCSV(file) {
     if(!file) return;
     const targetBox = confirm("Sollen die neuen Vokabeln direkt in Box 5 (bekannt) einsortiert werden?\nKlicke 'Abbrechen' für Box 1 (neu lernen).") ? 'box5' : 'box1';
@@ -103,18 +124,18 @@ function importCSV(file) {
         const rows = e.target.result.replace(/\r/g, "").split('\n');
         rows.forEach(r => {
             if(!r.trim()) return;
-            const p = r.split(',');
+            
+            // Nutzt den neuen intelligenten Parser statt .split(',')
+            const p = parseCSVLine(r);
+            
             if(p.length >= 3) {
-                // Nimmt alles ab dem 5. Komma (Index 5) und fügt es wieder zu einem Satz zusammen
-                let deSentence = p.slice(5).join(','); 
-                
                 state[targetBox].push({
-                    hz: p[0].trim(), 
-                    py: p[1].trim(), 
-                    de: p[2].trim(), 
-                    sentenceHz: p[3] ? p[3].trim() : '', 
-                    sentencePy: p[4] ? p[4].trim() : '', 
-                    sentenceDe: deSentence ? deSentence.trim() : ''
+                    hz: p[0], 
+                    py: p[1], 
+                    de: p[2], 
+                    sentenceHz: p[3] || '', 
+                    sentencePy: p[4] || '', 
+                    sentenceDe: p[5] || ''
                 });
             }
         });

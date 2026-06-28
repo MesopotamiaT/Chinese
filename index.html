@@ -14,7 +14,12 @@
         .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; }
         .nav-buttons { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
         .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 15px; }
-        .stat-box { background: #fff; padding: 8px 4px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0.75rem; font-weight: bold; }
+        .stat-box { background: #fff; padding: 8px 4px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0.75rem; font-weight: bold; transition: all 0.2s ease; border: 2px solid transparent; }
+        
+        /* CSS-Klasse für die optische Hervorhebung der aktiven Box */
+        .stat-box.active-box { border-color: var(--primary); transform: scale(1.05); box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); opacity: 1 !important; }
+        .stat-box.inactive-box { opacity: 0.5; }
+
         .card { background: var(--card); padding: 25px 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); text-align: center; }
         .hidden { display: none !important; }
         button { width: 100%; padding: 14px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
@@ -88,11 +93,29 @@
 <script>
 let state = JSON.parse(localStorage.getItem('hsk_data')) || { box1: [], box2: [], box3: [], box4: [], box5: [] };
 let currentCard = null;
+let currentBoxName = ""; // Speichert die Box der aktuellen Karte für das UI-Highlighting
 let writers = [];
 
 function updateUI() {
-    document.getElementById('stats').innerHTML = [1,2,3,4,5].map(i => `<div class="stat-box">B${i}<br>${state['box'+i].length}</div>`).join('');
+    // Rendert die Boxen und fügt die ID 'stat-box-X' hinzu, um sie später gezielt anzusprechen
+    document.getElementById('stats').innerHTML = [1,2,3,4,5].map(i => `<div id="stat-box-${i}" class="stat-box">B${i}<br>${state['box'+i].length}</div>`).join('');
     localStorage.setItem('hsk_data', JSON.stringify(state));
+    highlightActiveBox(); // Aktualisiert die Highlights nach dem Boxen-Rendering
+}
+
+// Hilfsfunktion: Setzt die CSS-Klassen für aktive/inaktive Boxen in der Leiste oben
+function highlightActiveBox() {
+    [1,2,3,4,5].forEach(i => {
+        let element = document.getElementById(`stat-box-${i}`);
+        if (element) {
+            element.classList.remove('active-box', 'inactive-box');
+            if (currentBoxName === 'box' + i) {
+                element.classList.add('active-box');
+            } else if (currentBoxName !== "") {
+                element.classList.add('inactive-box');
+            }
+        }
+    });
 }
 
 function parseCSVLine(text) {
@@ -162,14 +185,22 @@ function importCSV(file) {
 function next() {
     let pool = [];
     for(let i=1; i<=5; i++) for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push({c, box: 'box'+i}));
-    if(pool.length === 0) return;
+    if(pool.length === 0) {
+        currentBoxName = "";
+        return;
+    }
     
     let selection = pool[Math.floor(Math.random() * pool.length)];
     currentCard = selection.c;
+    currentBoxName = selection.box; // Setzt die aktuelle Box
     
+    // INFO VOR DEM UMDREHEN: Zeigt jetzt nur noch die HSK-Stufe im Text an
     let cardLevel = currentCard.level || "Unbekannt";
-    document.getElementById('v-box').innerText = "Aktuelle Box: " + selection.box.toUpperCase() + " | Stufe: " + cardLevel;
+    document.getElementById('v-box').innerText = "Stufe: " + cardLevel;
     document.getElementById('v-de').innerText = currentCard.de;
+    
+    // Färbe die Boxen oben ein
+    highlightActiveBox();
     
     // UI Reset
     document.getElementById('writer-container').classList.remove('hidden');
@@ -196,11 +227,10 @@ function next() {
 }
 
 function flip() {
-    let oldBox = Object.keys(state).find(k => state[k].includes(currentCard)) || 'box1';
+    // INFO NACH DEM UMDREHEN: Zeigt weiterhin nur noch die Stufe im Text an
     let cardLevel = currentCard.level || "Unbekannt";
-    document.getElementById('v-box').innerText = "Aktuelle Box: " + oldBox.toUpperCase() + " | Stufe: " + cardLevel;
+    document.getElementById('v-box').innerText = "Stufe: " + cardLevel;
 
-    // OPTIMIERUNG: Schriftzeichen werden jetzt doppelt so groß (7rem statt 3.5rem) angezeigt
     document.getElementById('v-hz').style.fontSize = "7rem";
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;

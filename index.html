@@ -93,7 +93,7 @@ function updateUI() {
     localStorage.setItem('hsk_data', JSON.stringify(state));
 }
 
-// Hilfsfunktion: Teilt CSV-Zeilen intelligent auf und ignoriert Kommas in Anführungszeichen
+// FIX: Erkennt nun auch deutsche Anführungszeichen („ und “) sowie englische (")
 function parseCSVLine(text) {
     let fields = [];
     let field = "";
@@ -101,20 +101,30 @@ function parseCSVLine(text) {
     
     for (let i = 0; i < text.length; i++) {
         let char = text[i];
-        if (char === '"') {
-            inQuotes = !inQuotes; // Wechselt Zustand, wenn Anführungszeichen gefunden wird
+        
+        // Prüft auf jegliche Art von Anführungszeichen
+        if (char === '"' || char === '„' || char === '“' || char === '”') {
+            inQuotes = !inQuotes; 
         } else if (char === ',' && !inQuotes) {
-            fields.push(field.trim());
+            fields.push(cleanField(field));
             field = "";
         } else {
             field += char;
         }
     }
-    fields.push(field.trim());
+    fields.push(cleanField(field));
     return fields;
 }
 
-/* NEU & INTELLIGENT: Verarbeitet jetzt auch Excel/Numbers-Anführungszeichen korrekt */
+// Bereinigt die Felder von eventuellen restlichen Anführungszeichen an den Rändern
+function cleanField(str) {
+    let t = str.trim();
+    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith('„') && t.endsWith('“'))) {
+        t = t.substring(1, t.length - 1);
+    }
+    return t.trim();
+}
+
 function importCSV(file) {
     if(!file) return;
     const targetBox = confirm("Sollen die neuen Vokabeln direkt in Box 5 (bekannt) einsortiert werden?\nKlicke 'Abbrechen' für Box 1 (neu lernen).") ? 'box5' : 'box1';
@@ -125,7 +135,6 @@ function importCSV(file) {
         rows.forEach(r => {
             if(!r.trim()) return;
             
-            // Nutzt den neuen intelligenten Parser statt .split(',')
             const p = parseCSVLine(r);
             
             if(p.length >= 3) {

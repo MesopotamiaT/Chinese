@@ -50,7 +50,7 @@
     <div class="card">
         <div id="v-box"></div>
         <div id="v-de" style="font-size: 1.6rem; font-weight:bold; word-break: break-word;">Bitte CSV laden...</div>
-        <div id="v-hz" class="hidden" style="font-size: 3.5rem; margin: 15px 0; color: var(--primary);"></div>
+        <div id="v-hz" class="hidden" style="font-size: 3.5rem; margin: 15px 0; color: var(--primary); line-height: 1.2;"></div>
         <div id="v-py" class="hidden" style="font-size: 1.3rem; color: #555;"></div>
         
         <button id="btn-example-trigger" class="hidden" style="background: #f39c12; color: white; margin-bottom: 10px;" onclick="openModal()">📖 Beispielsatz anzeigen</button>
@@ -128,7 +128,6 @@ function importCSV(file) {
     if(!file) return;
     const targetBox = confirm("Sollen die neuen Vokabeln direkt in Box 5 (bekannt) einsortiert werden?\nKlicke 'Abbrechen' für Box 1 (neu lernen).") ? 'box5' : 'box1';
     
-    // Automatische Erkennung der HSK-Stufe aus dem Dateinamen (z.B. hsk1_deutsch -> HSK1)
     let detectedLevel = "Import";
     let match = file.name.toLowerCase().match(/hsk\s*([1-6])/);
     if (match) {
@@ -151,7 +150,7 @@ function importCSV(file) {
                     sentenceHz: p[3] || '', 
                     sentencePy: p[4] || '', 
                     sentenceDe: p[5] || '',
-                    level: p[6] ? p[6].trim() : detectedLevel // Nutzen Spalte 6 falls vorhanden, sonst Dateiname
+                    level: p[6] ? p[6].trim() : detectedLevel
                 });
             }
         });
@@ -168,7 +167,6 @@ function next() {
     let selection = pool[Math.floor(Math.random() * pool.length)];
     currentCard = selection.c;
     
-    // ANZEIGE-INFO VOR DEM UMDREHEN (Box + HSK-Stufe)
     let cardLevel = currentCard.level || "Unbekannt";
     document.getElementById('v-box').innerText = "Aktuelle Box: " + selection.box.toUpperCase() + " | Stufe: " + cardLevel;
     document.getElementById('v-de').innerText = currentCard.de;
@@ -198,11 +196,12 @@ function next() {
 }
 
 function flip() {
-    // ANZEIGE-INFO NACH DEM UMDREHEN (Bleibt identisch sichtbar)
     let oldBox = Object.keys(state).find(k => state[k].includes(currentCard)) || 'box1';
     let cardLevel = currentCard.level || "Unbekannt";
     document.getElementById('v-box').innerText = "Aktuelle Box: " + oldBox.toUpperCase() + " | Stufe: " + cardLevel;
 
+    // OPTIMIERUNG: Schriftzeichen werden jetzt doppelt so groß (7rem statt 3.5rem) angezeigt
+    document.getElementById('v-hz').style.fontSize = "7rem";
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');

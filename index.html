@@ -10,34 +10,23 @@
     <style>
         :root { --bg: #f0f2f5; --card: #fff; --box1: #e74c3c; --box5: #27ae60; --primary: #3498db; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #333; }
-        .container { max-width: 600px; margin: auto; display: flex; flex-direction: column; height: calc(100vh - 30px); }
-        .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; flex-shrink: 0; }
+        .container { max-width: 600px; margin: auto; }
+        .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; }
         .nav-buttons { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
-        .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 15px; flex-shrink: 0; }
+        .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 15px; }
         .stat-box { background: #fff; padding: 8px 4px; border-radius: 8px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0.75rem; font-weight: bold; }
-        
-        /* OPTIMIERUNG: Die Karte nutzt den verfügbaren Platz optimal und scrollt intern, falls der Satz zu lang ist */
-        .card { 
-            background: var(--card); 
-            padding: 20px; 
-            border-radius: 20px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.08); 
-            text-align: center; 
-            display: flex; 
-            flex-direction: column;
-            max-height: calc(100vh - 160px); 
-            overflow-y: auto; 
-        }
-        
+        .card { background: var(--card); padding: 25px 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); text-align: center; }
         .hidden { display: none !important; }
-        button { width: 100%; padding: 14px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; flex-shrink: 0; }
+        button { width: 100%; padding: 14px; border-radius: 12px; border: none; margin-top: 10px; font-weight: bold; cursor: pointer; font-size: 1rem; }
         .btn-small { width: auto; padding: 6px 10px; font-size: 0.8rem; }
-        #v-box { font-size: 0.9rem; font-weight: bold; color: var(--primary); margin-bottom: 10px; padding: 5px; border-bottom: 1px solid #eee; flex-shrink: 0; }
+        #v-box { font-size: 0.9rem; font-weight: bold; color: var(--primary); margin-bottom: 10px; padding: 5px; border-bottom: 1px solid #eee; }
         .writer-grid { display: flex; flex-direction: column; gap: 10px; align-items: center; margin: 15px 0; }
         .char-box { width: 200px; height: 200px; border: 2px dashed #ccc; border-radius: 12px; background: #fafafa; }
         
-        /* OPTIMIERUNG: Bessere Lesbarkeit und Textumbruch für lange Sätze */
-        .example-box { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #e0e0e0; text-align: left; word-break: break-word; }
+        /* NEU: Styles für das Beispielsatz-Overlay */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; box-sizing: border-box; }
+        .modal-content { background: white; padding: 25px; border-radius: 20px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .modal-text { word-break: break-word; line-height: 1.4; margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -63,11 +52,7 @@
         <div id="v-hz" class="hidden" style="font-size: 3.5rem; margin: 15px 0; color: var(--primary);"></div>
         <div id="v-py" class="hidden" style="font-size: 1.3rem; color: #555;"></div>
         
-        <div id="v-example" class="example-box hidden">
-            <div id="ex-hz" style="font-size: 1.2rem; font-weight: bold; margin-bottom: 3px;"></div>
-            <div id="ex-py" style="font-style: italic; color: #666; margin-bottom: 3px;"></div>
-            <div id="ex-de" style="color: #333; font-size: 0.95rem;"></div>
-        </div>
+        <button id="btn-example-trigger" class="hidden" style="background: #f39c12; color: white; margin-bottom: 10px;" onclick="openModal()">📖 Beispielsatz anzeigen</button>
         
         <div id="writer-container" class="writer-grid hidden"></div>
         
@@ -75,11 +60,21 @@
         <button id="btn-show" class="hidden" style="background: var(--primary); color: white;" onclick="flip()">Lösung anzeigen</button>
         <button id="btn-audio" class="hidden" style="background: var(--primary); color: white;" onclick="speak()">🔊 Aussprache</button>
         
-        <div id="controls" class="hidden" style="display: flex; gap: 10px; width: 100%; margin-top: 10px; flex-shrink: 0;">
+        <div id="controls" class="hidden" style="display: flex; gap: 10px; width: 100%; margin-top: 10px;">
             <button style="background:var(--box1); color:white;" onclick="move(-1)">Falsch</button>
             <button style="background:#9b59b6; color:white;" onclick="move(0)">Halten</button>
             <button style="background:var(--box5); color:white;" onclick="move(1)">Richtig</button>
         </div>
+    </div>
+</div>
+
+<div id="exampleModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <h3 style="margin-top: 0; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 8px;">Beispielsatz</h3>
+        <div id="ex-hz" class="modal-text" style="font-size: 1.5rem; font-weight: bold; color: #2c3e50;"></div>
+        <div id="ex-py" class="modal-text" style="font-style: italic; color: #555; font-size: 1.1rem;"></div>
+        <div id="ex-de" class="modal-text" style="color: #333; font-size: 1rem; background: #f9f9f9; padding: 10px; border-radius: 8px;"></div>
+        <button style="background: #7f8c8d; color: white; margin-top: 15px; padding: 10px;" onclick="closeModal()">Schließen</button>
     </div>
 </div>
 
@@ -119,20 +114,18 @@ function next() {
     document.getElementById('v-box').innerText = "Aktuelle Box: " + selection.box.toUpperCase();
     document.getElementById('v-de').innerText = currentCard.de;
     
-    // Reset der Standard-Schriftgröße für das Hauptzeichen
-    document.getElementById('v-hz').style.fontSize = "3.5rem";
-    
     // UI Reset
     document.getElementById('writer-container').classList.remove('hidden');
     document.getElementById('writer-container').innerHTML = '';
     writers = []; 
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
-    document.getElementById('v-example').classList.add('hidden');
+    document.getElementById('btn-example-trigger').classList.add('hidden'); // Reset Trigger-Button
     document.getElementById('btn-show').classList.remove('hidden');
     document.getElementById('btn-clear').classList.remove('hidden');
     document.getElementById('btn-audio').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
+    closeModal(); // Schließt das Modal, falls es noch offen war
 
     currentCard.hz.replace(/\s/g, '').split('').forEach(char => {
         if(/[\u4e00-\u9fa5]/.test(char)) {
@@ -145,20 +138,18 @@ function next() {
 }
 
 function flip() {
-    // OPTIMIERUNG: Wenn ein Beispielsatz existiert, verkleinern wir das Hauptzeichen, um vertikalen Platz zu sparen
-    if (currentCard.sentenceHz) {
-        document.getElementById('v-hz').style.fontSize = "2.5rem";
-        
-        document.getElementById('ex-hz').innerText = currentCard.sentenceHz;
-        document.getElementById('ex-py').innerText = currentCard.sentencePy;
-        document.getElementById('ex-de').innerText = currentCard.sentenceDe;
-        document.getElementById('v-example').classList.remove('hidden');
-    }
-
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');
     document.getElementById('v-py').classList.remove('hidden');
+    
+    // Wenn ein Beispielsatz vorhanden ist, befüllen wir das Modal und zeigen den Button
+    if (currentCard.sentenceHz) {
+        document.getElementById('ex-hz').innerText = currentCard.sentenceHz;
+        document.getElementById('ex-py').innerText = currentCard.sentencePy;
+        document.getElementById('ex-de').innerText = currentCard.sentenceDe;
+        document.getElementById('btn-example-trigger').classList.remove('hidden');
+    }
     
     document.getElementById('writer-container').classList.add('hidden');
     document.getElementById('btn-show').classList.add('hidden');
@@ -166,6 +157,10 @@ function flip() {
     document.getElementById('btn-audio').classList.remove('hidden');
     document.getElementById('controls').classList.remove('hidden');
 }
+
+// Funktionen für das Modal-Fenster
+function openModal() { document.getElementById('exampleModal').classList.remove('hidden'); }
+function closeModal() { document.getElementById('exampleModal').classList.add('hidden'); }
 
 function move(step) {
     let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));

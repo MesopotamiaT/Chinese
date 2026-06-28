@@ -23,10 +23,32 @@
         .writer-grid { display: flex; flex-direction: column; gap: 10px; align-items: center; margin: 15px 0; }
         .char-box { width: 200px; height: 200px; border: 2px dashed #ccc; border-radius: 12px; background: #fafafa; }
         
-        /* NEU: Styles für das Beispielsatz-Overlay */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; box-sizing: border-box; }
-        .modal-content { background: white; padding: 25px; border-radius: 20px; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto; text-align: left; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        .modal-text { word-break: break-word; line-height: 1.4; margin-bottom: 12px; }
+        /* FIX: Optimierte Styles für das Beispielsatz-Overlay */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; box-sizing: border-box; }
+        
+        /* Das Modal nutzt jetzt Flexbox, um den Button unten zu halten und den Text scrollbar zu machen */
+        .modal-content { 
+            background: white; 
+            padding: 25px; 
+            border-radius: 20px; 
+            max-width: 500px; 
+            width: 100%; 
+            max-height: 85vh; 
+            display: flex; 
+            flex-direction: column; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            box-sizing: border-box;
+        }
+        
+        /* Der Textbereich scrollt jetzt absolut sauber, egal wie lang der Satz ist */
+        .modal-scroll-area {
+            overflow-y: auto;
+            flex-grow: 1;
+            margin-bottom: 15px;
+            padding-right: 5px; /* Platz für den Scrollbalken */
+        }
+        
+        .modal-text { word-break: break-word; line-height: 1.5; margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -70,11 +92,15 @@
 
 <div id="exampleModal" class="modal-overlay hidden">
     <div class="modal-content">
-        <h3 style="margin-top: 0; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 8px;">Beispielsatz</h3>
-        <div id="ex-hz" class="modal-text" style="font-size: 1.5rem; font-weight: bold; color: #2c3e50;"></div>
-        <div id="ex-py" class="modal-text" style="font-style: italic; color: #555; font-size: 1.1rem;"></div>
-        <div id="ex-de" class="modal-text" style="color: #333; font-size: 1rem; background: #f9f9f9; padding: 10px; border-radius: 8px;"></div>
-        <button style="background: #7f8c8d; color: white; margin-top: 15px; padding: 10px;" onclick="closeModal()">Schließen</button>
+        <h3 style="margin-top: 0; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 8px; flex-shrink: 0;">Beispielsatz</h3>
+        
+        <div class="modal-scroll-area">
+            <div id="ex-hz" class="modal-text" style="font-size: 1.6rem; font-weight: bold; color: #2c3e50;"></div>
+            <div id="ex-py" class="modal-text" style="font-style: italic; color: #555; font-size: 1.1rem;"></div>
+            <div id="ex-de" class="modal-text" style="color: #333; font-size: 1.05rem; background: #f9f9f9; padding: 12px; border-radius: 8px; border-left: 4px solid var(--primary);"></div>
+        </div>
+        
+        <button style="background: #7f8c8d; color: white; margin-top: 0; padding: 12px; flex-shrink: 0;" onclick="closeModal()">Schließen</button>
     </div>
 </div>
 
@@ -120,12 +146,12 @@ function next() {
     writers = []; 
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
-    document.getElementById('btn-example-trigger').classList.add('hidden'); // Reset Trigger-Button
+    document.getElementById('btn-example-trigger').classList.add('hidden');
     document.getElementById('btn-show').classList.remove('hidden');
     document.getElementById('btn-clear').classList.remove('hidden');
     document.getElementById('btn-audio').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
-    closeModal(); // Schließt das Modal, falls es noch offen war
+    closeModal();
 
     currentCard.hz.replace(/\s/g, '').split('').forEach(char => {
         if(/[\u4e00-\u9fa5]/.test(char)) {
@@ -143,7 +169,6 @@ function flip() {
     document.getElementById('v-hz').classList.remove('hidden');
     document.getElementById('v-py').classList.remove('hidden');
     
-    // Wenn ein Beispielsatz vorhanden ist, befüllen wir das Modal und zeigen den Button
     if (currentCard.sentenceHz) {
         document.getElementById('ex-hz').innerText = currentCard.sentenceHz;
         document.getElementById('ex-py').innerText = currentCard.sentencePy;
@@ -158,7 +183,6 @@ function flip() {
     document.getElementById('controls').classList.remove('hidden');
 }
 
-// Funktionen für das Modal-Fenster
 function openModal() { document.getElementById('exampleModal').classList.remove('hidden'); }
 function closeModal() { document.getElementById('exampleModal').classList.add('hidden'); }
 
@@ -168,7 +192,6 @@ function move(step) {
     
     state[oldBox] = state[oldBox].filter(c => c !== currentCard);
     
-    // Berechnet die neue Box (Minimum 1, Maximum 5)
     let newLevel = Math.min(Math.max(level + step, 1), 5);
     state['box' + newLevel].push(currentCard);
     

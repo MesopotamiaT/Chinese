@@ -61,6 +61,8 @@
         <button id="btn-show" class="hidden" style="background: var(--primary); color: white;" onclick="flip()">Lösung anzeigen</button>
         <button id="btn-audio" class="hidden" style="background: var(--primary); color: white;" onclick="speak()">🔊 Aussprache</button>
         
+        <button id="btn-to-box5" class="hidden" style="background: #2c3e50; color: white; margin-top: 15px;" onclick="moveToBox5()">⭐ Direkt in Box 5</button>
+        
         <div id="controls" class="hidden" style="display: flex; gap: 10px; width: 100%; margin-top: 10px;">
             <button style="background:var(--box1); color:white;" onclick="move(-1)">Falsch</button>
             <button style="background:#9b59b6; color:white;" onclick="move(0)">Halten</button>
@@ -93,7 +95,6 @@ function updateUI() {
     localStorage.setItem('hsk_data', JSON.stringify(state));
 }
 
-// FIX: Erkennt nun auch deutsche Anführungszeichen („ und “) sowie englische (")
 function parseCSVLine(text) {
     let fields = [];
     let field = "";
@@ -102,7 +103,6 @@ function parseCSVLine(text) {
     for (let i = 0; i < text.length; i++) {
         let char = text[i];
         
-        // Prüft auf jegliche Art von Anführungszeichen
         if (char === '"' || char === '„' || char === '“' || char === '”') {
             inQuotes = !inQuotes; 
         } else if (char === ',' && !inQuotes) {
@@ -116,7 +116,6 @@ function parseCSVLine(text) {
     return fields;
 }
 
-// Bereinigt die Felder von eventuellen restlichen Anführungszeichen an den Rändern
 function cleanField(str) {
     let t = str.trim();
     if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith('„') && t.endsWith('“'))) {
@@ -128,6 +127,13 @@ function cleanField(str) {
 function importCSV(file) {
     if(!file) return;
     const targetBox = confirm("Sollen die neuen Vokabeln direkt in Box 5 (bekannt) einsortiert werden?\nKlicke 'Abbrechen' für Box 1 (neu lernen).") ? 'box5' : 'box1';
+    
+    // Automatische Erkennung der HSK-Stufe aus dem Dateinamen (z.B. hsk1_deutsch -> HSK1)
+    let detectedLevel = "Import";
+    let match = file.name.toLowerCase().match(/hsk\s*([1-6])/);
+    if (match) {
+        detectedLevel = "HSK " + match[1];
+    }
     
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -144,7 +150,8 @@ function importCSV(file) {
                     de: p[2], 
                     sentenceHz: p[3] || '', 
                     sentencePy: p[4] || '', 
-                    sentenceDe: p[5] || ''
+                    sentenceDe: p[5] || '',
+                    level: p[6] ? p[6].trim() : detectedLevel // Nutzen Spalte 6 falls vorhanden, sonst Dateiname
                 });
             }
         });
@@ -160,7 +167,10 @@ function next() {
     
     let selection = pool[Math.floor(Math.random() * pool.length)];
     currentCard = selection.c;
-    document.getElementById('v-box').innerText = "Aktuelle Box: " + selection.box.toUpperCase();
+    
+    // ANZEIGE-INFO VOR DEM UMDREHEN (Box + HSK-Stufe)
+    let cardLevel = currentCard.level || "Unbekannt";
+    document.getElementById('v-box').innerText = "Aktuelle Box: " + selection.box.toUpperCase() + " | Stufe: " + cardLevel;
     document.getElementById('v-de').innerText = currentCard.de;
     
     // UI Reset
@@ -170,6 +180,7 @@ function next() {
     document.getElementById('v-hz').classList.add('hidden');
     document.getElementById('v-py').classList.add('hidden');
     document.getElementById('btn-example-trigger').classList.add('hidden');
+    document.getElementById('btn-to-box5').classList.add('hidden');
     document.getElementById('btn-show').classList.remove('hidden');
     document.getElementById('btn-clear').classList.remove('hidden');
     document.getElementById('btn-audio').classList.add('hidden');
@@ -187,6 +198,11 @@ function next() {
 }
 
 function flip() {
+    // ANZEIGE-INFO NACH DEM UMDREHEN (Bleibt identisch sichtbar)
+    let oldBox = Object.keys(state).find(k => state[k].includes(currentCard)) || 'box1';
+    let cardLevel = currentCard.level || "Unbekannt";
+    document.getElementById('v-box').innerText = "Aktuelle Box: " + oldBox.toUpperCase() + " | Stufe: " + cardLevel;
+
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');
@@ -203,6 +219,7 @@ function flip() {
     document.getElementById('btn-show').classList.add('hidden');
     document.getElementById('btn-clear').classList.add('hidden');
     document.getElementById('btn-audio').classList.remove('hidden');
+    document.getElementById('btn-to-box5').classList.remove('hidden');
     document.getElementById('controls').classList.remove('hidden');
 }
 
@@ -218,6 +235,15 @@ function move(step) {
     let newLevel = Math.min(Math.max(level + step, 1), 5);
     state['box' + newLevel].push(currentCard);
     
+    updateUI(); next();
+}
+
+function moveToBox5() {
+    let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
+    if (oldBox) {
+        state[oldBox] = state[oldBox].filter(c => c !== currentCard);
+    }
+    state['box5'].push(currentCard);
     updateUI(); next();
 }
 

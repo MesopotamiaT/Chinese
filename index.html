@@ -119,8 +119,8 @@
         /* Hanzi-Schreibgitter */
         .writer-grid { display: flex; flex-direction: flex-row; flex-wrap: wrap; justify-content: center; gap: 15px; margin: 25px 0; }
         .char-box { 
-            width: 150px; 
-            height: 150px; 
+            width: 180px; 
+            height: 180px; 
             border: 2px dashed #dcdde1; 
             border-radius: 16px; 
             background: #fafbfc; 
@@ -354,7 +354,7 @@ function next() {
             hasHanzi = true;
             let div = document.createElement('div'); div.className = 'char-box';
             document.getElementById('writer-container').appendChild(div);
-            let writer = HanziWriter.create(div, char, { width: 150, height: 150, showCharacter: false, showOutline: false, padding: 10, strokeColor: '#4a90e2' });
+            let writer = HanziWriter.create(div, char, { width: 180, height: 180, showCharacter: false, showOutline: false, padding: 15, strokeColor: '#4a90e2' });
             writer.quiz(); writers.push(writer);
         }
     });

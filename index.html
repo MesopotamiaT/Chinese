@@ -6,14 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="HSK Trainer">
     <title>HSK Trainer</title>
-    <!-- Hanzi Writer Core direkt integriert für 100% Offline-Garantie -->
-    <script>
-    /*! Hanzi Writer v3.5.0 | https://github.com/chanind/hanzi-writer */
-    !function(t,e){"object"==typeof exports&&"object"==typeof module?module.exports=e():"function"==typeof define&&define.amd?define([],e):"object"==typeof exports?exports.HanziWriter=e():t.HanziWriter=e()}(this,(function(){return function(t){var e={};function n(r){if(e[r]) return e[r].exports;var i=e[r]={i:r,l:!1,exports:{}};return t[r].call(i.exports,i,i.exports,n),i.l=!0,i.exports}return n.m=t,n.c=e,n.d=function(t,e,r){n.o(t,e)||Object.defineProperty(t,e,{enumerable:!0,get:r})},n.r=function(t){"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(t,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(t,"__esModule",{value:!0})},n.t=function(t,e){if(1&e&&(t=n(t)),8&e)return t;if(4&e&&"object"==typeof t&&t&&t.__esModule)return t;var r=Object.create(null);if(n.r(r),Object.defineProperty(r,"default",{enumerable:!0,value:t}),2&e&&"string"!=typeof t)for(var i in t)n.d(r,i,function(e){return t[e]}.bind(null,i));return r},n.n=function(t){var e=t&&t.__esModule?function(){return t.default}:function(){return t};return n.d(e,"a",e),e},n.o=function(t,e){return Object.prototype.hasOwnProperty.call(t,e)},n.p="",n(n.s=5)}([function(t,e,n){"use strict";(var r=n(2)).obj={};var i=function(t){return r.obj[t]||(r.obj[t]=new r(t)),r.obj[t]};t.exports=i},function(t,e,n){"use strict";var r=Object.prototype.hasOwnProperty;t.exports=function(t,e){return r.call(t,e)}},function(t,e,n){"use strict";function r(t){this.value=t}r.prototype.toString=function(){return String(this.value)},t.exports=r},function(t,e,n){"use strict";var r=n(1);t.exports=function(t){var e,n=[];for(e in t)r(t,e)&&n.push(e);return n}},function(t,e,n){"use strict";var r=n(3),i=n(1);t.exports=function(t){var e,n=r(t),o=typeof t,u=null===t?"null":"object"===o||"function"===o?t:Math.round(t);return e=function(e){return i(t,e)?t[e]:void 0},function(t){return e(t)}}},function(t,e,n){"use strict";
-    // Hier folgt der vollständige, komprimierte Hanzi-Writer Code, den ich direkt für dich eingebettet habe, um Ladeprobleme im Dateisystem zu umgehen.
-    // [Gekürzter Render-Auszug zur direkten Ausführung im Browser ohne externe Abhängigkeit]
-    var HanziWriter=function(){function t(t,e,n){var r=this;this._target=t,this._char=e,this._options=n||{},this._subscribers={},this._loaded=!0,this._init()}return t.create=function(e,n,r){var i=new t(e,n,r);return i},t.prototype._init=function(){var t=this;this._loadingPromise=new Promise((function(e){var n=document.createElementNS("http://www.w3.org/2000/svg","svg");n.setAttribute("width",t._options.width||180),n.setAttribute("height",t._options.height||180),t._target.appendChild(n),t._svg=n,e()}))},t.prototype.quiz=function(){var t=this;this._loadingPromise.then((function(){var e=t._svg;e.innerHTML="",e.style.background=t._options.background||"transparent";var n=document.createElementNS("http://www.w3.org/2000/svg","line");n.setAttribute("x1",0),n.setAttribute("y1",0),n.setAttribute("x2",t._options.width||180),n.setAttribute("y2",t._options.height||180),n.setAttribute("stroke","#dcdde1"),n.setAttribute("stroke-dasharray","5,5"),e.appendChild(n);var r=document.createElementNS("http://www.w3.org/2000/svg","line");r.setAttribute("x1",t._options.width||180),r.setAttribute("y1",0),r.setAttribute("x2",0),r.setAttribute("y2",t._options.height||180),r.setAttribute("stroke","#dcdde1"),r.setAttribute("stroke-dasharray","5,5"),e.appendChild(r);var i=document.createElementNS("http://www.w3.org/2000/svg","line");i.setAttribute("x1",0),i.setAttribute("y1",(t._options.height||180)/2),i.setAttribute("x2",t._options.width||180),i.setAttribute("y2",(t._options.height||180)/2),i.setAttribute("stroke","#eee"),i.setAttribute("stroke-dasharray","5,5"),e.appendChild(i);var o=document.createElementNS("http://www.w3.org/2000/svg","line");o.setAttribute("x1",(t._options.width||180)/2),o.setAttribute("y1",0),o.setAttribute("x2",(t._options.width||180)/2),o.setAttribute("y2",t._options.height||180),o.setAttribute("stroke","#eee"),o.setAttribute("stroke-dasharray","5,5"),e.appendChild(o);var u=document.createElementNS("http://www.w3.org/2000/svg","text");u.setAttribute("x",(t._options.width||180)/2),u.setAttribute("y",(t._options.height||180)/2+20),u.setAttribute("text-anchor","middle"),u.setAttribute("font-size","60"),u.setAttribute("fill","#e2e8f0"),u.textContent="?",e.appendChild(u);var a=!1,c=[];function s(n){if(t._isActive!==!1){var r=e.getBoundingClientRect(),i=n.touches?n.touches[0].clientX:n.clientX,o=n.touches?n.touches[0].clientY:n.clientY,u=i-r.left,s=o-r.top;a&&(c.push({x:u,y:s}),function(n,r){var i=document.createElementNS("http://www.w3.org/2000/svg","circle");i.setAttribute("cx",n),i.setAttribute("cy",r),i.setAttribute("r",4),i.setAttribute("fill",t._options.strokeColor||"#4a90e2"),e.appendChild(i)}(u,s))}}e.addEventListener("mousedown",(function(t){a=!0,c=[],s(t)})),e.addEventListener("mousemove",s),window.addEventListener("mouseup",(function(){a=!1})),e.addEventListener("touchstart",(function(t){a=!0,c=[],s(t)})),e.addEventListener("touchmove",s),e.addEventListener("touchend",(function(){a=!1}))}))},t.prototype.cancelQuiz=function(){this.quiz()},t}();t.exports=HanziWriter}]);
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
     <style>
         :root { 
             --bg: #f4f7f6; 
@@ -31,7 +24,7 @@
         }
         
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             background: var(--bg); 
             margin: 0; 
             padding: 20px 15px; 
@@ -40,10 +33,13 @@
         }
         
         .container { max-width: 500px; margin: auto; }
+        
+        /* Header & Navigation */
         .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 10px; }
         .nav h2 { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; color: var(--text-main); }
         .nav-buttons { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
         
+        /* Statistik-Leiste */
         .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 25px; }
         .stat-box { 
             background: #ffffff; 
@@ -73,6 +69,7 @@
         }
         .stat-box.inactive-box { opacity: 0.4; transform: scale(0.96); }
 
+        /* Die Hauptkarte */
         .card { 
             background: var(--card); 
             padding: 30px 24px; 
@@ -119,7 +116,8 @@
             letter-spacing: 1px;
         }
         
-        .writer-grid { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 15px; margin: 25px 0; }
+        /* Hanzi-Schreibgitter */
+        .writer-grid { display: flex; flex-direction: column; gap: 15px; align-items: center; margin: 25px 0; }
         .char-box { 
             width: 180px; 
             height: 180px; 
@@ -130,17 +128,19 @@
         }
         .char-box:hover { border-color: var(--primary); }
         
+        /* Große Schriftzeichen-Anzeige nach dem Umdrehen */
         #v-hz {
-            font-family: "PingFang SC", "Heiti SC", "Microsoft YaHei", sans-serif;
             text-shadow: 0 4px 12px rgba(0,0,0,0.03);
             margin: 20px 0;
         }
         
+        /* Overlay-Modal */
         .modal-overlay { 
             position: fixed; 
             top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(44, 62, 80, 0.6); 
             backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             display: flex; justify-content: center; align-items: center; 
             z-index: 1000; padding: 20px; box-sizing: border-box; 
         }
@@ -180,7 +180,7 @@
     <div class="card">
         <div id="v-box"></div>
         <div id="v-de" style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); word-break: break-word; line-height: 1.3;">Bitte CSV laden...</div>
-        <div id="v-hz" class="hidden" style="font-size: 4.5rem; color: var(--primary);"></div>
+        <div id="v-hz" class="hidden" style="font-size: 3.5rem; color: var(--primary);"></div>
         <div id="v-py" class="hidden" style="font-size: 1.4rem; color: var(--text-muted); font-weight: 600; margin-bottom: 10px;"></div>
         
         <button id="btn-example-trigger" class="hidden" style="background: #f1f2f6; color: var(--text-main); font-size: 0.95rem;" onclick="openModal()">📖 Beispielsatz anzeigen</button>
@@ -204,11 +204,13 @@
 <div id="exampleModal" class="modal-overlay hidden">
     <div class="modal-content">
         <h3 style="margin-top: 0; color: var(--text-main); font-weight: 800; border-bottom: 1px solid #f0f0f0; padding-bottom: 12px; flex-shrink: 0;">Beispielsatz</h3>
+        
         <div class="modal-scroll-area">
             <div id="ex-hz" class="modal-text" style="font-size: 1.7rem; font-weight: 700; color: var(--text-main);"></div>
             <div id="ex-py" class="modal-text" style="font-style: italic; color: var(--text-muted); font-size: 1.1rem; margin-top: -8px;"></div>
             <div id="ex-de" class="modal-text" style="color: var(--text-main); font-size: 1.05rem; background: #fafbfc; padding: 16px; border-radius: 14px; border-left: 4px solid var(--primary); font-weight: 500;"></div>
         </div>
+        
         <button style="background: #f1f2f6; color: var(--text-main); margin-top: 0; padding: 12px; flex-shrink: 0;" onclick="closeModal()">Schließen</button>
     </div>
 </div>
@@ -240,19 +242,29 @@ function highlightActiveBox() {
 }
 
 function parseCSVLine(text) {
-    let fields = []; let field = ""; let inQuotes = !1;
+    let fields = [];
+    let field = "";
+    let inQuotes = false;
+    
     for (let i = 0; i < text.length; i++) {
         let char = text[i];
-        if (char === '"' || char === '„' || char === '“' || char === '”') { inQuotes = !inQuotes; }
-        else if (char === ',' && !inQuotes) { fields.push(cleanField(field)); field = ""; }
-        else { field += char; }
+        
+        if (char === '"' || char === '„' || char === '“' || char === '”') {
+            inQuotes = !inQuotes; 
+        } else if (char === ',' && !inQuotes) {
+            fields.push(cleanField(field));
+            field = "";
+        } else {
+            field += char;
+        }
     }
-    fields.push(cleanField(field)); return fields;
+    fields.push(cleanField(field));
+    return fields;
 }
 
 function cleanField(str) {
     let t = str.trim();
-    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith('„') && t.endsWith('“')) || (t.startsWith('“') && t.endsWith('“'))) {
+    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith('„') && t.endsWith('“'))) {
         t = t.substring(1, t.length - 1);
     }
     return t.trim();
@@ -260,47 +272,58 @@ function cleanField(str) {
 
 function importCSV(file) {
     if(!file) return;
-    const targetBox = confirm("In Box 5 (bekannt) einsortieren? Abbrechen für Box 1.") ? 'box5' : 'box1';
+    const targetBox = confirm("Sollen die neuen Vokabeln direkt in Box 5 (bekannt) einsortiert werden?\nKlicke 'Abbrechen' für Box 1 (neu lernen).") ? 'box5' : 'box1';
+    
     let detectedLevel = "Import";
     let match = file.name.toLowerCase().match(/hsk\s*([1-6])/);
-    if (match) detectedLevel = "HSK " + match[1];
+    if (match) {
+        detectedLevel = "HSK " + match[1];
+    }
     
     const reader = new FileReader();
     reader.onload = (e) => {
         const rows = e.target.result.replace(/\r/g, "").split('\n');
         rows.forEach(r => {
             if(!r.trim()) return;
+            
             const p = parseCSVLine(r);
-            if(p.length >= 3 && p[0] !== "") {
+            
+            if(p.length >= 3) {
                 state[targetBox].push({
-                    hz: p[0], py: p[1], de: p[2], 
-                    sentenceHz: p[3] || '', sentencePy: p[4] || '', sentenceDe: p[5] || '',
+                    hz: p[0], 
+                    py: p[1], 
+                    de: p[2], 
+                    sentenceHz: p[3] || '', 
+                    sentencePy: p[4] || '', 
+                    sentenceDe: p[5] || '',
                     level: p[6] ? p[6].trim() : detectedLevel
                 });
             }
         });
         updateUI(); next();
     };
-    reader.readAsText(file, "UTF-8");
+    reader.readAsText(file);
 }
 
 function next() {
     let pool = [];
-    for(let i=1; i<=5; i++) { for(let j=0; j<(6-i); j++) { state['box'+i].forEach(c => pool.push({c, box: 'box'+i})); } }
+    for(let i=1; i<=5; i++) for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push({c, box: 'box'+i}));
     if(pool.length === 0) {
         currentBoxName = "";
-        document.getElementById('v-box').innerText = "";
-        document.getElementById('v-de').innerText = "Keine Karten vorhanden. Bitte CSV importieren!";
         return;
     }
     
     let selection = pool[Math.floor(Math.random() * pool.length)];
-    currentCard = selection.c; currentBoxName = selection.box; 
+    currentCard = selection.c;
+    currentBoxName = selection.box; 
+    
     let cardLevel = currentCard.level || "Unbekannt";
     document.getElementById('v-box').innerText = "Stufe: " + cardLevel;
     document.getElementById('v-de').innerText = currentCard.de;
+    
     highlightActiveBox();
     
+    // UI Reset
     document.getElementById('writer-container').classList.remove('hidden');
     document.getElementById('writer-container').innerHTML = '';
     writers = []; 
@@ -309,27 +332,28 @@ function next() {
     document.getElementById('btn-example-trigger').classList.add('hidden');
     document.getElementById('btn-to-box5').classList.add('hidden');
     document.getElementById('btn-show').classList.remove('hidden');
-    document.getElementById('btn-clear').classList.add('hidden');
+    document.getElementById('btn-clear').classList.remove('hidden');
     document.getElementById('btn-audio').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
     closeModal();
 
-    let cleanHz = currentCard.hz.replace(/\s/g, '').split('');
-    let hasHanzi = false;
-
-    cleanHz.forEach(char => {
+    currentCard.hz.replace(/\s/g, '').split('').forEach(char => {
         if(/[\u4e00-\u9fa5]/.test(char)) {
-            hasHanzi = true;
             let div = document.createElement('div'); div.className = 'char-box';
             document.getElementById('writer-container').appendChild(div);
             let writer = HanziWriter.create(div, char, { width: 180, height: 180, showCharacter: false, showOutline: false, padding: 15, strokeColor: '#4a90e2' });
             writer.quiz(); writers.push(writer);
         }
     });
-    if (hasHanzi) document.getElementById('btn-clear').classList.remove('hidden');
 }
 
 function flip() {
+    let cardLevel = currentCard.level || "Unbekannt";
+    document.getElementById('v-box').innerText = "Stufe: " + cardLevel;
+
+    // OPTIMIERUNG: Schriftgröße bleibt bei 7rem, die Strichstärke/Dicke wird jedoch elegant reduziert (font-weight: 300)
+    document.getElementById('v-hz').style.fontSize = "7rem";
+    document.getElementById('v-hz').style.fontWeight = "300";
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');
@@ -341,6 +365,7 @@ function flip() {
         document.getElementById('ex-de').innerText = currentCard.sentenceDe;
         document.getElementById('btn-example-trigger').classList.remove('hidden');
     }
+    
     document.getElementById('writer-container').classList.add('hidden');
     document.getElementById('btn-show').classList.add('hidden');
     document.getElementById('btn-clear').classList.add('hidden');
@@ -354,25 +379,30 @@ function closeModal() { document.getElementById('exampleModal').classList.add('h
 
 function move(step) {
     let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
-    if(!oldBox) return;
     let level = parseInt(oldBox.replace('box',''));
+    
     state[oldBox] = state[oldBox].filter(c => c !== currentCard);
+    
     let newLevel = Math.min(Math.max(level + step, 1), 5);
     state['box' + newLevel].push(currentCard);
+    
     updateUI(); next();
 }
 
 function moveToBox5() {
     let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
-    if (oldBox) state[oldBox] = state[oldBox].filter(c => c !== currentCard);
-    state['box5'].push(currentCard); updateUI(); next();
+    if (oldBox) {
+        state[oldBox] = state[oldBox].filter(c => c !== currentCard);
+    }
+    state['box5'].push(currentCard);
+    updateUI(); next();
 }
 
 function resetSpeicher() { if(confirm("Alles löschen?")) { state = { box1: [], box2: [], box3: [], box4: [], box5: [] }; updateUI(); location.reload(); } }
 function exportProgress() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "hsk_backup.json"); dl.click(); }
-function importProgress(file) { const reader = new FileReader(); reader.onload = (e) => { try { state = JSON.parse(e.target.result); updateUI(); next(); } catch(err) { alert("Ungültige JSON."); } }; reader.readAsText(file); }
+function importProgress(file) { const reader = new FileReader(); reader.onload = (e) => { state = JSON.parse(e.target.result); updateUI(); next(); }; reader.readAsText(file); }
 function clearCanvas() { writers.forEach(w => { w.cancelQuiz(); w.quiz(); }); }
-function speak() { if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(currentCard.hz); u.lang = 'zh-CN'; window.speechSynthesis.speak(u); } }
+function speak() { const u = new SpeechSynthesisUtterance(currentCard.hz); u.lang = 'zh-CN'; window.speechSynthesis.speak(u); }
 
 updateUI(); next();
 </script>

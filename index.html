@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="HSK Trainer">
     <title>HSK Trainer</title>
-    <script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
+    <script src="hanzi-writer.min.js"></script>
     <style>
         :root { 
             --bg: #f4f7f6; 
@@ -24,7 +24,7 @@
         }
         
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
             background: var(--bg); 
             margin: 0; 
             padding: 20px 15px; 
@@ -117,10 +117,10 @@
         }
         
         /* Hanzi-Schreibgitter */
-        .writer-grid { display: flex; flex-direction: column; gap: 15px; align-items: center; margin: 25px 0; }
+        .writer-grid { display: flex; flex-direction: flex-row; flex-wrap: wrap; justify-content: center; gap: 15px; margin: 25px 0; }
         .char-box { 
-            width: 180px; 
-            height: 180px; 
+            width: 150px; 
+            height: 150px; 
             border: 2px dashed #dcdde1; 
             border-radius: 16px; 
             background: #fafbfc; 
@@ -130,6 +130,7 @@
         
         /* Große Schriftzeichen-Anzeige nach dem Umdrehen */
         #v-hz {
+            font-family: "PingFang SC", "Heiti SC", "Microsoft YaHei", "Malgun Gothic", sans-serif;
             text-shadow: 0 4px 12px rgba(0,0,0,0.03);
             margin: 20px 0;
         }
@@ -180,7 +181,7 @@
     <div class="card">
         <div id="v-box"></div>
         <div id="v-de" style="font-size: 1.5rem; font-weight: 700; color: var(--text-main); word-break: break-word; line-height: 1.3;">Bitte CSV laden...</div>
-        <div id="v-hz" class="hidden" style="font-size: 3.5rem; color: var(--primary);"></div>
+        <div id="v-hz" class="hidden" style="font-size: 4.5rem; color: var(--primary);"></div>
         <div id="v-py" class="hidden" style="font-size: 1.4rem; color: var(--text-muted); font-weight: 600; margin-bottom: 10px;"></div>
         
         <button id="btn-example-trigger" class="hidden" style="background: #f1f2f6; color: var(--text-main); font-size: 0.95rem;" onclick="openModal()">📖 Beispielsatz anzeigen</button>
@@ -206,7 +207,7 @@
         <h3 style="margin-top: 0; color: var(--text-main); font-weight: 800; border-bottom: 1px solid #f0f0f0; padding-bottom: 12px; flex-shrink: 0;">Beispielsatz</h3>
         
         <div class="modal-scroll-area">
-            <div id="ex-hz" class="modal-text" style="font-size: 1.7rem; font-weight: 700; color: var(--text-main);"></div>
+            <div id="ex-hz" class="modal-text" style="font-size: 1.7rem; font-weight: 700; color: var(--text-main); font-family: sans-serif;"></div>
             <div id="ex-py" class="modal-text" style="font-style: italic; color: var(--text-muted); font-size: 1.1rem; margin-top: -8px;"></div>
             <div id="ex-de" class="modal-text" style="color: var(--text-main); font-size: 1.05rem; background: #fafbfc; padding: 16px; border-radius: 14px; border-left: 4px solid var(--primary); font-weight: 500;"></div>
         </div>
@@ -264,7 +265,9 @@ function parseCSVLine(text) {
 
 function cleanField(str) {
     let t = str.trim();
-    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith('„') && t.endsWith('“'))) {
+    if ((t.startsWith('"') && t.endsWith('"')) || 
+        (t.startsWith('„') && t.endsWith('“')) || 
+        (t.startsWith('“') && t.endsWith('“'))) {
         t = t.substring(1, t.length - 1);
     }
     return t.trim();
@@ -288,7 +291,7 @@ function importCSV(file) {
             
             const p = parseCSVLine(r);
             
-            if(p.length >= 3) {
+            if(p.length >= 3 && p[0] !== "") {
                 state[targetBox].push({
                     hz: p[0], 
                     py: p[1], 
@@ -302,14 +305,20 @@ function importCSV(file) {
         });
         updateUI(); next();
     };
-    reader.readAsText(file);
+    reader.readAsText(file, "UTF-8");
 }
 
 function next() {
     let pool = [];
-    for(let i=1; i<=5; i++) for(let j=0; j<(6-i); j++) state['box'+i].forEach(c => pool.push({c, box: 'box'+i}));
+    for(let i=1; i<=5; i++) {
+        for(let j=0; j<(6-i); j++) {
+            state['box'+i].forEach(c => pool.push({c, box: 'box'+i}));
+        }
+    }
     if(pool.length === 0) {
         currentBoxName = "";
+        document.getElementById('v-box').innerText = "";
+        document.getElementById('v-de').innerText = "Keine Karten vorhanden. Bitte CSV importieren!";
         return;
     }
     
@@ -332,28 +341,34 @@ function next() {
     document.getElementById('btn-example-trigger').classList.add('hidden');
     document.getElementById('btn-to-box5').classList.add('hidden');
     document.getElementById('btn-show').classList.remove('hidden');
-    document.getElementById('btn-clear').classList.remove('hidden');
+    document.getElementById('btn-clear').classList.add('hidden');
     document.getElementById('btn-audio').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
     closeModal();
 
-    currentCard.hz.replace(/\s/g, '').split('').forEach(char => {
+    let cleanHz = currentCard.hz.replace(/\s/g, '').split('');
+    let hasHanzi = false;
+
+    cleanHz.forEach(char => {
         if(/[\u4e00-\u9fa5]/.test(char)) {
+            hasHanzi = true;
             let div = document.createElement('div'); div.className = 'char-box';
             document.getElementById('writer-container').appendChild(div);
-            let writer = HanziWriter.create(div, char, { width: 180, height: 180, showCharacter: false, showOutline: false, padding: 15, strokeColor: '#4a90e2' });
+            let writer = HanziWriter.create(div, char, { width: 150, height: 150, showCharacter: false, showOutline: false, padding: 10, strokeColor: '#4a90e2' });
             writer.quiz(); writers.push(writer);
         }
     });
+
+    if (hasHanzi) {
+        document.getElementById('btn-clear').classList.remove('hidden');
+    }
 }
 
 function flip() {
     let cardLevel = currentCard.level || "Unbekannt";
     document.getElementById('v-box').innerText = "Stufe: " + cardLevel;
 
-    // OPTIMIERUNG: Schriftgröße bleibt bei 7rem, die Strichstärke/Dicke wird jedoch elegant reduziert (font-weight: 300)
-    document.getElementById('v-hz').style.fontSize = "7rem";
-    document.getElementById('v-hz').style.fontWeight = "300";
+    document.getElementById('v-hz').style.fontSize = "4.5rem"; 
     document.getElementById('v-hz').innerText = currentCard.hz;
     document.getElementById('v-py').innerText = currentCard.py;
     document.getElementById('v-hz').classList.remove('hidden');
@@ -379,6 +394,7 @@ function closeModal() { document.getElementById('exampleModal').classList.add('h
 
 function move(step) {
     let oldBox = Object.keys(state).find(k => state[k].includes(currentCard));
+    if(!oldBox) return;
     let level = parseInt(oldBox.replace('box',''));
     
     state[oldBox] = state[oldBox].filter(c => c !== currentCard);
@@ -398,11 +414,19 @@ function moveToBox5() {
     updateUI(); next();
 }
 
-function resetSpeicher() { if(confirm("Alles löschen?")) { state = { box1: [], box2: [], box3: [], box4: [], box5: [] }; updateUI(); location.reload(); } }
+function resetSpeicher() { if(confirm("Alles löschen? Ich hoffe du hast ein Backup!")) { state = { box1: [], box2: [], box3: [], box4: [], box5: [] }; updateUI(); location.reload(); } }
 function exportProgress() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "hsk_backup.json"); dl.click(); }
-function importProgress(file) { const reader = new FileReader(); reader.onload = (e) => { state = JSON.parse(e.target.result); updateUI(); next(); }; reader.readAsText(file); }
+function importProgress(file) { const reader = new FileReader(); reader.onload = (e) => { try { state = JSON.parse(e.target.result); updateUI(); next(); } catch(err) { alert("Ungültige JSON-Datei."); } }; reader.readAsText(file); }
 function clearCanvas() { writers.forEach(w => { w.cancelQuiz(); w.quiz(); }); }
-function speak() { const u = new SpeechSynthesisUtterance(currentCard.hz); u.lang = 'zh-CN'; window.speechSynthesis.speak(u); }
+
+function speak() { 
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel(); 
+        const u = new SpeechSynthesisUtterance(currentCard.hz); 
+        u.lang = 'zh-CN'; 
+        window.speechSynthesis.speak(u); 
+    }
+}
 
 updateUI(); next();
 </script>
